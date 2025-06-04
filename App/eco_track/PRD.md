@@ -9,7 +9,7 @@ Here's the revised Frontend PRD:
 
 *   **Author:** Emre Kolunsağ, Ali Ata Haktan Çetinkol (Flutter Developers)
 *   **Date:** [Current Date]
-*   **Version:** 2.0
+*   **Version:** 1.0
 *   **Project Phase:** October 2024 - June 2025
 *   **Project Scope:** Graduation Project (Istanbul Aydin University)
 *   **Language:** English (Application and Documentation)
