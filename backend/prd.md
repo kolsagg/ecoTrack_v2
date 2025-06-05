@@ -1,9 +1,3 @@
-Okay, I've revised the PRD to better emphasize the support for frontend data visualization and graphing, particularly within the API endpoint descriptions for reporting.
-
-Here's the updated PRD:
-
----
-
 # Product Requirements Document (PRD) - Backend (FastAPI/Supabase)
 ## QR-Based Digital Expense Tracking Application - Backend Development Task List
 
@@ -113,26 +107,26 @@ All tables will use UUIDs for their primary keys (`id`). Row Level Security (RLS
 This section lists all business logic, AI integration, database operations (using Supabase Python client), and API endpoint development tasks to be implemented using FastAPI.
 
 ### 5.1. Core Backend Infrastructure and Configuration
-*   [ ] **Task:** Select and set up FastAPI as the Python backend framework.
-*   [ ] **Task:** Integrate necessary Python libraries: `fastapi`, `uvicorn`, `supabase`, `pydantic`, `python-jose`, `httpx`, logging libraries.
-*   [ ] **Task:** Establish environment variable management (`.env` file).
-*   [ ] **Task:** Implement comprehensive error handling and logging.
-*   [ ] **Task:** Configure security policies (CORS, security headers).
+*   [x] **Task:** Select and set up FastAPI as the Python backend framework.
+*   [x] **Task:** Integrate necessary Python libraries: `fastapi`, `uvicorn`, `supabase`, `pydantic`, `python-jose`, `httpx`, logging libraries.
+*   [x] **Task:** Establish environment variable management (`.env` file).
+*   [x] **Task:** Implement comprehensive error handling and logging.
+*   [x] **Task:** Configure security policies (CORS, security headers).
 
 ### 5.2. Database Management (Supabase - PostgreSQL via Python Client)
-*   [ ] **Task:** Configure Supabase project.
-*   [ ] **Task:** Implement database schema using SQL (as defined in Section 4).
-*   [ ] **Task:** Define table relationships in SQL (Foreign Keys, Constraints, Cascades).
-*   [ ] **Task:** Configure Supabase Row Level Security (RLS) policies via SQL.
-*   [ ] **Task:** Create necessary database indexes for performance via SQL (on `user_id`, dates, foreign keys for efficient aggregation and filtering).
-*   [ ] **Task:** Set up Supabase Python client (`supabase`) for data operations in FastAPI.
+*   [x] **Task:** Configure Supabase project.
+*   [x] **Task:** Implement database schema using SQL (as defined in Section 4).
+*   [x] **Task:** Define table relationships in SQL (Foreign Keys, Constraints, Cascades).
+*   [x] **Task:** Configure Supabase Row Level Security (RLS) policies via SQL.
+*   [x] **Task:** Create necessary database indexes for performance via SQL (on `user_id`, dates, foreign keys for efficient aggregation and filtering).
+*   [x] **Task:** Set up Supabase Python client (`supabase`) for data operations in FastAPI.
 
 ### 5.3. Authentication and Authorization Services
-*   [ ] **Task:** Implement User Registration (Sign-up) API Endpoint.
-*   [ ] **Task:** Implement User Login API Endpoint.
-*   [ ] **Task:** Implement Password Reset/Forgot Password API Endpoint.
+*   [x] **Task:** Implement User Registration (Sign-up) API Endpoint.
+*   [x] **Task:** Implement User Login API Endpoint.
+*   [x] **Task:** Implement Password Reset/Forgot Password API Endpoint.
 *   [ ] **Task:** Implement Two-Factor Authentication (2FA) (Investigate Supabase Auth).
-*   [ ] **Task:** Develop JWT token validation and user authorization middleware.
+*   [x] **Task:** Develop JWT token validation and user authorization middleware.
 
 ### 5.4. Data Processing, Parsing, and Cleaning Services
 *   [ ] **Task:** Develop QR code data parsing functions.
