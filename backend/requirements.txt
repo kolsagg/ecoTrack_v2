@@ -1,4 +1,4 @@
-fastapi==0.109.2
+fastapi==0.115.12
 uvicorn==0.27.1
 supabase>=2.4.0
 pydantic==2.11.5
@@ -6,4 +6,16 @@ pydantic-settings==2.9.1
 python-jose[cryptography]==3.3.0
 httpx>=0.24,<0.26
 python-multipart==0.0.9
-python-dotenv==1.0.1 
+python-dotenv==1.0.1
+# QR Code and data processing
+qrcode==8.2
+pyzbar==0.1.9
+pillow==11.2.1
+# Text processing and regex
+regex==2023.12.25
+# AI integration for categorization
+ollama==0.1.7
+# Data validation and cleaning
+validators==0.22.0
+# Date parsing
+python-dateutil==2.8.2 

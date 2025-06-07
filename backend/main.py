@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 from app.core.config import settings
-from app.api.v1 import router as api_router
+from app.api.v1.api import api_router
 
 # Initialize FastAPI app
 app = FastAPI(

@@ -58,11 +58,3 @@ class MFAStatus(BaseModel):
     is_enabled: bool
     factors: List[str] = []  # ["totp", "backup_codes"]
     preferred_factor: Optional[str] = None
-
-class BackupCodes(BaseModel):
-    """
-    Response schema for backup codes.
-    """
-    codes: List[str]
-    created_at: str
-    remaining_codes: int 

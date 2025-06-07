@@ -68,19 +68,17 @@ All tables will use UUIDs for their primary keys (`id`). Row Level Security (RLS
 *   `updated_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
 *   **RLS Policy:** Users can only access/manage their own receipts.
 
-### 4.4. `expenses` Table
+### 4.4. `expenses` Table (Summary/Container for expense_items)
 *   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
 *   `receipt_id` (UUID, Foreign Key references `receipts.id` ON DELETE CASCADE, NOT NULL)
 *   `user_id` (UUID, Foreign Key references `users.id`, NOT NULL)
-*   `category_id` (UUID, Foreign Key references `categories.id`, NULLABLE)
-*   `description` (TEXT, NOT NULL)
-*   `amount` (NUMERIC(10, 2), NOT NULL)
-*   `quantity` (INTEGER, default: 1, NULLABLE)
+*   `total_amount` (NUMERIC(10, 2), NOT NULL)
 *   `expense_date` (TIMESTAMP WITH TIME ZONE, NOT NULL, default: `now()`)
 *   `notes` (TEXT, NULLABLE)
 *   `created_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
 *   `updated_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
 *   **RLS Policy:** Users can only access/manage their own expenses.
+*   **Note:** This table serves as a summary/container. Individual items are stored in `expense_items` table.
 
 ### 4.5. `loyalty_status` Table
 *   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
@@ -90,7 +88,63 @@ All tables will use UUIDs for their primary keys (`id`). Row Level Security (RLS
 *   `last_updated` (TIMESTAMP WITH TIME ZONE, default: `now()`)
 *   **RLS Policy:** Users can only access their own loyalty status.
 
-### 4.6. `ai_suggestions` Table
+### 4.6. `expense_items` Table
+*   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
+*   `expense_id` (UUID, Foreign Key references `expenses.id` ON DELETE CASCADE, NOT NULL)
+*   `user_id` (UUID, Foreign Key references `users.id`, NOT NULL)
+*   `category_id` (UUID, Foreign Key references `categories.id`, NULLABLE)
+*   `description` (TEXT, NOT NULL)
+*   `amount` (NUMERIC(10, 2), NOT NULL)
+*   `quantity` (INTEGER, default: 1, NOT NULL)
+*   `unit_price` (NUMERIC(10, 2), NULLABLE)
+*   `notes` (TEXT, NULLABLE)
+*   `created_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   `updated_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   **RLS Policy:** Users can only access/manage their own expense items.
+
+### 4.7. `merchants` Table
+*   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
+*   `name` (TEXT, NOT NULL)
+*   `business_type` (TEXT, NULLABLE)
+*   `api_key` (TEXT, NOT NULL, UNIQUE)
+*   `webhook_url` (TEXT, NULLABLE)
+*   `is_active` (BOOLEAN, default: true, NOT NULL)
+*   `contact_email` (TEXT, NULLABLE)
+*   `contact_phone` (TEXT, NULLABLE)
+*   `address` (TEXT, NULLABLE)
+*   `tax_number` (TEXT, NULLABLE)
+*   `settings` (JSONB, NULLABLE)
+*   `created_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   `updated_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   **RLS Policy:** Admin access only.
+
+### 4.8. `webhook_logs` Table
+*   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
+*   `merchant_id` (UUID, Foreign Key references `merchants.id`, NOT NULL)
+*   `transaction_id` (TEXT, NULLABLE)
+*   `payload` (JSONB, NOT NULL)
+*   `status` (TEXT, NOT NULL, e.g., 'success', 'failed', 'retry')
+*   `response_code` (INTEGER, NULLABLE)
+*   `error_message` (TEXT, NULLABLE)
+*   `processing_time_ms` (INTEGER, NULLABLE)
+*   `retry_count` (INTEGER, default: 0, NOT NULL)
+*   `created_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   **RLS Policy:** Admin access only.
+
+### 4.9. `user_payment_methods` Table
+*   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
+*   `user_id` (UUID, Foreign Key references `users.id` ON DELETE CASCADE, NOT NULL)
+*   `card_hash` (TEXT, NOT NULL)
+*   `card_last_four` (TEXT, NOT NULL)
+*   `card_type` (TEXT, NULLABLE, e.g., 'visa', 'mastercard')
+*   `is_primary` (BOOLEAN, default: false, NOT NULL)
+*   `is_active` (BOOLEAN, default: true, NOT NULL)
+*   `created_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   `updated_at` (TIMESTAMP WITH TIME ZONE, default: `now()`)
+*   **RLS Policy:** Users can only access their own payment methods.
+*   **Constraint:** UNIQUE (`user_id`, `card_hash`)
+
+### 4.10. `ai_suggestions` Table
 *   `id` (UUID, Primary Key, default: `gen_random_uuid()`)
 *   `user_id` (UUID, Foreign Key references `users.id` ON DELETE CASCADE, NOT NULL)
 *   `prompt_context_summary` (JSONB, NULLABLE)
@@ -125,31 +179,50 @@ This section lists all business logic, AI integration, database operations (usin
 *   [x] **Task:** Implement User Registration (Sign-up) API Endpoint.
 *   [x] **Task:** Implement User Login API Endpoint.
 *   [x] **Task:** Implement Password Reset/Forgot Password API Endpoint.
-*   [ ] **Task:** Implement Two-Factor Authentication (2FA) (Investigate Supabase Auth).
+*   [x] **Task:** Implement Two-Factor Authentication (2FA) (Investigate Supabase Auth).
 *   [x] **Task:** Develop JWT token validation and user authorization middleware.
 
 ### 5.4. Data Processing, Parsing, and Cleaning Services
-*   [ ] **Task:** Develop QR code data parsing functions.
-*   [ ] **Task:** Implement data extraction logic from parsed receipt data.
-*   [ ] **Task:** Develop data cleaning and formatting logic.
-*   [ ] **Task:** Implement logic for processing and saving manually entered expense data (auto-creating `receipts` record).
-*   [ ] **Task:** Implement automatic expense categorization (AI-assisted with `tinyllama`).
+*   [x] **Task:** Develop QR code data parsing functions.
+*   [x] **Task:** Implement data extraction logic from parsed receipt data.
+*   [x] **Task:** Develop data cleaning and formatting logic.
+*   [x] **Task:** Implement logic for processing and saving manually entered expense data (auto-creating `receipts` record).
+*   [x] **Task:** Implement automatic expense categorization (AI-assisted with `tinyllama`).
 
 ### 5.5. Expense and Receipt Management API Endpoints (FastAPI)
-*   [ ] **Task:** `POST /api/receipts/scan`: Accepts QR data, parses, creates `receipts` and `expenses`.
-*   [ ] **Task:** `POST /api/expenses`: Accepts manual expense data, creates `receipts` and `expenses`.
-*   [ ] **Task:** `GET /api/receipts`: Lists receipts. Support pagination, filtering (date range, merchant, amount), and sorting (date, amount).
-*   [ ] **Task:** `GET /api/receipts/{receipt_id}`: Retrieves a specific receipt and its expenses.
-*   [ ] **Task:** `GET /api/expenses`: Lists expenses. Support pagination, filtering (date range, category, merchant, amount), and sorting (date, amount).
-*   [ ] **Task:** `GET /api/expenses/{expense_id}`: Retrieves a specific expense.
-*   [ ] **Task:** `PUT /api/expenses/{expense_id}`: Updates an expense.
-*   [ ] **Task:** `DELETE /api/expenses/{expense_id}`: Deletes an expense.
-*   [ ] **Task:** `GET /api/categories`: Lists predefined and user's custom categories.
-*   [ ] **Task:** `POST /api/categories`: Allows user to add a custom category.
-*   [ ] **Task:** `PUT /api/categories/{category_id}`: Allows user to update their custom category.
-*   [ ] **Task:** `DELETE /api/categories/{category_id}`: Allows user to delete their custom category.
+*   [x] **Task:** `POST /api/receipts/scan`: Accepts QR data, parses, creates `receipts` and `expenses`.
+*   [x] **Task:** `POST /api/expenses`: Accepts manual expense data, creates `receipts` and `expenses`.
+*   [x] **Task:** `GET /api/receipts`: Lists receipts. Support pagination, filtering (date range, merchant, amount), and sorting (date, amount).
+*   [x] **Task:** `GET /api/receipts/{receipt_id}`: Retrieves a specific receipt and its expenses.
+*   [x] **Task:** `GET /api/expenses`: Lists expenses. Support pagination, filtering (date range, category, merchant, amount), and sorting (date, amount).
+*   [x] **Task:** `GET /api/expenses/{expense_id}`: Retrieves a specific expense.
+*   [x] **Task:** `PUT /api/expenses/{expense_id}`: Updates an expense.
+*   [x] **Task:** `DELETE /api/expenses/{expense_id}`: Deletes an expense.
+*   [x] **Task:** `GET /api/categories`: Lists predefined and user's custom categories.
+*   [x] **Task:** `POST /api/categories`: Allows user to add a custom category.
+*   [x] **Task:** `PUT /api/categories/{category_id}`: Allows user to update their custom category.
+*   [x] **Task:** `DELETE /api/categories/{category_id}`: Allows user to delete their custom category.
 
-### 5.6. AI and Analysis Engine Services (Local Ollama with `tinyllama`)
+### 5.6. Merchant Integration and Webhook Services
+*   [ ] **Task:** Design and implement merchant onboarding system for partner stores.
+*   [ ] **Task:** `POST /api/merchants`: Register new merchant partner with API credentials.
+*   [ ] **Task:** `GET /api/merchants`: List registered merchant partners (admin only).
+*   [ ] **Task:** `PUT /api/merchants/{merchant_id}`: Update merchant information and settings.
+*   [ ] **Task:** `DELETE /api/merchants/{merchant_id}`: Deactivate merchant partnership.
+*   [ ] **Task:** Implement merchant API key generation and validation system.
+*   [ ] **Task:** `POST /api/webhooks/merchant/{merchant_id}/transaction`: Webhook endpoint for receiving real-time transaction data from merchant POS systems.
+*   [ ] **Task:** Develop customer matching logic for automatic receipt delivery:
+    *   **Card-based matching:** Hash and match payment card numbers with user accounts.
+    *   **Phone-based matching:** Match customer phone numbers with user profiles.
+    *   **Email-based matching:** Match customer email addresses with user accounts.
+*   [ ] **Task:** Implement automatic receipt and expense_items creation from merchant transaction data.
+*   [ ] **Task:** Develop notification system for automatic receipt delivery to matched customers.
+*   [ ] **Task:** `GET /api/webhooks/merchant/{merchant_id}/logs`: Webhook delivery logs and status tracking.
+*   [ ] **Task:** Implement webhook retry mechanism for failed deliveries.
+*   [ ] **Task:** Develop merchant transaction data validation and sanitization.
+*   [ ] **Task:** `POST /api/merchants/{merchant_id}/test-transaction`: Test endpoint for merchant integration testing.
+
+### 5.7. AI and Analysis Engine Services (Local Ollama with `tinyllama`)
 *   [ ] **Task:** Develop services for analyzing spending data for personalized savings suggestions.
 *   [ ] **Task:** `GET /api/suggestions/savings`: API for personalized savings suggestions.
 *   [ ] **Task:** Develop logic for budget planning suggestions.
@@ -160,7 +233,7 @@ This section lists all business logic, AI integration, database operations (usin
 *   [ ] **Task:** Develop logic for identifying recurring expenses/products.
 *   [ ] **Task:** Develop logic for tracking price changes for specific products.
 
-### 5.7. Financial Reporting and Visualization Data Services
+### 5.8. Financial Reporting and Visualization Data Services
 *   [ ] **Task:** `GET /api/reports/spending-distribution`:
     *   **Details:** Prepares data for spending distribution charts (e.g., by category, by merchant). Accepts filters (date range, specific categories).
     *   **Output Structure Example (for pie/bar charts):** `[{"label": "Food", "value": 350.00, "percentage": 35.0, "color": "#FF6384"}, {"label": "Transport", "value": 150.00, "percentage": 15.0, "color": "#36A2EB"}, ...]`
@@ -175,11 +248,11 @@ This section lists all business logic, AI integration, database operations (usin
     *   **Output Structure Example (for grouped bar charts):** `[{"category": "Food", "budgeted": 400.00, "actual": 350.00}, {"category": "Transport", "budgeted": 200.00, "actual": 150.00}, ...]`
 *   [ ] **Task:** Ensure all reporting endpoints accept relevant filter parameters (date range, category IDs, merchant names, etc.) to customize the data returned for visualization.
 
-### 5.8. Loyalty Program Services
+### 5.9. Loyalty Program Services
 *   [ ] **Task:** Implement business logic for loyalty point calculation.
 *   [ ] **Task:** `GET /api/loyalty/status`: Returns user's loyalty points and level.
 
-### 5.9. Infrastructure, Security, and Operational Tasks (Backend)
+### 5.10. Infrastructure, Security, and Operational Tasks (Backend)
 *   [ ] **Task:** Ensure HTTPS is enforced for all API endpoints.
 *   [ ] **Task:** Securely manage sensitive data.
 *   [ ] **Task:** Implement API-level authorization checks.
@@ -187,7 +260,7 @@ This section lists all business logic, AI integration, database operations (usin
 *   [ ] **Task:** Backend logic for push notification service integration.
 *   [ ] **Task:** Deploy backend services.
 
-### 5.10. Testing Tasks (Backend)
+### 5.11. Testing Tasks (Backend)
 *   [ ] **Task:** Write unit tests for business logic (`pytest`).
 *   [ ] **Task:** Write integration tests for API endpoints (`pytest` with `TestClient`). Specifically test data aggregation logic for reporting endpoints.
 *   [ ] **Task:** Test database query correctness and RLS policies.
@@ -247,10 +320,10 @@ This section lists all business logic, AI integration, database operations (usin
 
 (This section provides a high-level timeline for the Backend development phase. Completed phases/tasks to be marked `[x]`.)
 
-*   [ ] **Phase 1: Foundation & Core Setup**
-    *   [ ] Task Group 5.1, 5.2, 5.3
-*   [ ] **Phase 2: Core Feature Implementation**
-    *   [ ] Task Group 5.4, 5.5
+*   [x] **Phase 1: Foundation & Core Setup**
+    *   [x] Task Group 5.1, 5.2, 5.3
+*   [x] **Phase 2: Core Feature Implementation** (Data Processing Services & API Endpoints Completed)
+    *   [x] Task Group 5.4 (Completed), [x] Task Group 5.5 (Completed)
 *   [ ] **Phase 3: AI, Reporting & Advanced Features**
     *   [ ] Task Group 5.6, 5.7 (Focus on data structures for graphs), 5.8
 *   [ ] **Phase 4: Operations & Testing**
