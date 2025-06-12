@@ -163,6 +163,15 @@ class DataCleaner:
             elif cleaned_data['amount'] and cleaned_data['quantity'] > 0:
                 cleaned_data['unit_price'] = round(cleaned_data['amount'] / cleaned_data['quantity'], 2)
             
+            # Clean and validate KDV rate
+            if cleaned_data.get('kdv_rate'):
+                cleaned_data['kdv_rate'] = self._clean_kdv_rate(cleaned_data['kdv_rate'])
+            else:
+                # If no KDV rate provided, suggest one based on description
+                from app.utils.kdv_calculator import KDVCalculator
+                suggested_rate = KDVCalculator.suggest_kdv_rate_by_description(cleaned_data['description'])
+                cleaned_data['kdv_rate'] = suggested_rate
+            
             # Clean date
             if cleaned_data.get('expense_date'):
                 cleaned_data['expense_date'] = self._clean_date(cleaned_data['expense_date'])
@@ -308,15 +317,24 @@ class DataCleaner:
         
         return 'TRY'  # Default to Turkish Lira
 
-    def _clean_date(self, date_input: Union[str, datetime, date]) -> datetime:
-        """Clean and validate date"""
+    def _clean_date(self, date_input: Union[str, datetime, date]) -> str:
+        """Clean and validate date, return as ISO string for JSON serialization"""
         if isinstance(date_input, datetime):
-            return date_input
+            return date_input.isoformat()
         
         if isinstance(date_input, date):
-            return datetime.combine(date_input, datetime.min.time())
+            return datetime.combine(date_input, datetime.min.time()).isoformat()
         
         if isinstance(date_input, str):
+            # If already ISO format, validate and return
+            if 'T' in date_input and ('Z' in date_input or '+' in date_input):
+                try:
+                    # Parse to validate, then return as ISO
+                    parsed = datetime.fromisoformat(date_input.replace('Z', '+00:00'))
+                    return parsed.isoformat()
+                except ValueError:
+                    pass
+            
             # Try to parse various date formats
             date_formats = [
                 '%Y-%m-%d %H:%M:%S',
@@ -335,19 +353,21 @@ class DataCleaner:
             
             for fmt in date_formats:
                 try:
-                    return datetime.strptime(date_input.strip(), fmt)
+                    parsed_date = datetime.strptime(date_input.strip(), fmt)
+                    return parsed_date.isoformat()
                 except ValueError:
                     continue
             
             # Try dateutil parser as fallback
             try:
                 from dateutil import parser as date_parser
-                return date_parser.parse(date_input, dayfirst=True)
+                parsed_date = date_parser.parse(date_input, dayfirst=True)
+                return parsed_date.isoformat()
             except Exception:
                 pass
         
-        # Return current datetime if parsing fails
-        return datetime.now()
+        # Return current datetime as ISO string if parsing fails
+        return datetime.now().isoformat()
 
     def _clean_tax_number(self, tax_number: str) -> Optional[str]:
         """Clean and validate tax number"""
@@ -521,6 +541,36 @@ class DataCleaner:
             validation_result['is_valid'] = False
         
         return validation_result
+
+    def _clean_kdv_rate(self, kdv_rate: Union[str, int, float]) -> float:
+        """Clean and validate KDV rate"""
+        if kdv_rate is None:
+            return 20.0  # Default to most common rate
+        
+        if isinstance(kdv_rate, (int, float)):
+            rate = float(kdv_rate)
+        elif isinstance(kdv_rate, str):
+            # Remove any non-numeric characters except decimal point
+            cleaned = re.sub(r'[^\d.]', '', str(kdv_rate))
+            try:
+                rate = float(cleaned)
+            except ValueError:
+                return 20.0  # Default if parsing fails
+        else:
+            return 20.0
+        
+        # Validate against allowed KDV rates in Turkey
+        valid_rates = [1.0, 10.0, 20.0]
+        
+        # Find closest valid rate
+        closest_rate = min(valid_rates, key=lambda x: abs(x - rate))
+        
+        # If the input rate is close enough to a valid rate, use it
+        if abs(rate - closest_rate) <= 1.0:
+            return closest_rate
+        
+        # Otherwise, default to 20%
+        return 20.0
 
 # Create singleton instance
 data_cleaner = DataCleaner() 

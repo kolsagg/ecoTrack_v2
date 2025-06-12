@@ -1,63 +1,14 @@
+# ===================================
 # Python
+# ===================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+*.egg
 *.egg-info/
 .installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-env/
-ENV/
-.env
-.venv
-.env.local
-.env.*.local
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-.DS_Store
-.project
-.classpath
-.settings/
-.cursor/
-
-# Logs
-*.log
-logs/
-log/
-
-# Coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-
-# Unit test / coverage reports
-.pytest_cache/
+MANIFEST
 
 # Distribution / packaging
 .Python
@@ -74,7 +25,158 @@ sdist/
 var/
 wheels/
 share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+
+# ===================================
+# Virtual Environments
+# ===================================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ===================================
+# Environment Variables
+# ===================================
+.env.local
+.env.development
+.env.test
+.env.production
+
+# ===================================
+# IDE & Editors
+# ===================================
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Cursor
+.cursor/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===================================
+# Operating Systems
+# ===================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ===================================
+# Logs
+# ===================================
+*.log
+*.log.*
+logs/
+log/
+
+# ===================================
+# Testing & Coverage
+# ===================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ===================================
+# Database
+# ===================================
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3-journal
+
+# ===================================
+# FastAPI Specific
+# ===================================
+# Static files
+static/uploads/
+uploads/
+media/
+
+# Cache
+.cache/
+cache/
+
+# ===================================
+# Supabase
+# ===================================
+.supabase/
+
+# ===================================
+# Docker
+# ===================================
+.dockerignore
+
+# ===================================
+# Security & Secrets
+# ===================================
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# ===================================
+# Temporary Files
+# ===================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# ===================================
+# Project Specific
+# ===================================
+# Test files that shouldn't be committed
+test_*.html
+test_*.json
+*_test_report.*
+comprehensive_*.py
+final_*.py
+demo_*.py
+run_*.py
+create_*.py
+*.md.backup
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/

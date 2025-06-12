@@ -92,15 +92,21 @@ class DataExtractor:
         
         for item in items:
             try:
+                description = self._clean_description(item.get('name', item.get('description', 'Unknown Item')))
+                
                 expense = {
-                    'description': self._clean_description(item.get('name', item.get('description', 'Unknown Item'))),
+                    'description': description,
                     'amount': self._extract_amount_from_item(item),
                     'quantity': self._extract_quantity_from_item(item),
                     'unit_price': None,
-                    'category_hint': self._suggest_category(item.get('name', item.get('description', ''))),
+                    'category_hint': self._suggest_category(description),
                     'expense_date': receipt_data.get('transaction_date', datetime.now()),
                     'notes': None
                 }
+                
+                # Add KDV rate suggestion based on description
+                from app.utils.kdv_calculator import KDVCalculator
+                expense['kdv_rate'] = KDVCalculator.suggest_kdv_rate_by_description(description)
                 
                 # Calculate unit price if possible
                 if expense['amount'] and expense['quantity'] and expense['quantity'] > 0:
@@ -171,11 +177,18 @@ class DataExtractor:
         if not amount or amount <= 0:
             return None
         
+        description = self._clean_description(description)
+        
+        # Add KDV rate suggestion based on description
+        from app.utils.kdv_calculator import KDVCalculator
+        kdv_rate = KDVCalculator.suggest_kdv_rate_by_description(description)
+        
         return {
-            'description': self._clean_description(description),
+            'description': description,
             'amount': amount,
             'quantity': quantity,
             'unit_price': round(amount / quantity, 2) if quantity > 0 else amount,
+            'kdv_rate': kdv_rate,
             'category_hint': self._suggest_category(description),
             'expense_date': receipt_data.get('transaction_date', datetime.now()),
             'notes': None
@@ -191,11 +204,16 @@ class DataExtractor:
         
         description = f"Purchase from {merchant_name}"
         
+        # Add KDV rate suggestion based on merchant/description
+        from app.utils.kdv_calculator import KDVCalculator
+        kdv_rate = KDVCalculator.suggest_kdv_rate_by_description(description)
+        
         expense = {
             'description': description,
             'amount': float(total_amount),
             'quantity': 1,
             'unit_price': float(total_amount),
+            'kdv_rate': kdv_rate,
             'category_hint': self._suggest_category_from_merchant(merchant_name),
             'expense_date': receipt_data.get('transaction_date', datetime.now()),
             'notes': f"Total receipt amount - items not individually parsed"

@@ -4,6 +4,7 @@ from io import BytesIO
 import base64
 from datetime import datetime
 from typing import Dict, Any, Optional
+from app.core.config import settings
 
 class QRGenerator:
     """QR Code generator for receipts"""
@@ -15,6 +16,8 @@ class QRGenerator:
             box_size=10,
             border=4,
         )
+        # Base URL for receipt viewing from config
+        self.base_url = f"{settings.WEB_BASE_URL}/api/v1/receipts/receipt"
     
     def generate_receipt_qr(
         self,
@@ -25,22 +28,16 @@ class QRGenerator:
         transaction_date: Optional[datetime] = None
     ) -> str:
         """
-        Generate QR code for a receipt in Turkish e-receipt format
+        Generate QR code for a receipt with URL format
         Returns base64 encoded QR code image
         """
         if not transaction_date:
             transaction_date = datetime.now()
         
-        # Create Turkish e-receipt format QR data
-        qr_data = self._create_turkish_receipt_format(
-            receipt_id=receipt_id,
-            merchant_name=merchant_name,
-            total_amount=total_amount,
-            currency=currency,
-            transaction_date=transaction_date
-        )
+        # Create URL-based QR data for both app and web access
+        qr_url = f"{self.base_url}/{receipt_id}"
         
-        return self._generate_qr_image(qr_data)
+        return self._generate_qr_image(qr_url)
     
     def _create_turkish_receipt_format(
         self,
@@ -50,19 +47,11 @@ class QRGenerator:
         currency: str,
         transaction_date: datetime
     ) -> str:
-        """Create Turkish e-receipt format QR data"""
-        
-        # Format similar to Turkish e-receipt QR codes
-        qr_lines = [
-            f"{merchant_name}",
-            f"Fiş No: {receipt_id[:8]}",
-            f"Tarih: {transaction_date.strftime('%d.%m.%Y %H:%M')}",
-            f"Toplam: {total_amount:.2f} {currency}",
-            f"EcoTrack Dijital Fiş",
-            f"Receipt ID: {receipt_id}"
-        ]
-        
-        return "\n".join(qr_lines)
+        """
+        Create URL format for receipt access
+        This method is kept for backward compatibility but now returns URL
+        """
+        return f"{self.base_url}/{receipt_id}"
     
     def _generate_qr_image(self, data: str) -> str:
         """Generate QR code image and return as base64 string"""
@@ -88,17 +77,48 @@ class QRGenerator:
     def parse_receipt_qr(self, qr_data: str) -> Optional[str]:
         """
         Parse QR data to extract receipt ID
+        Now supports both old format and new URL format
         Returns receipt_id if found, None otherwise
         """
         try:
+            # Check if it's the new URL format
+            if qr_data.startswith(f"{self.base_url}/"):
+                receipt_id = qr_data.replace(f"{self.base_url}/", "")
+                return receipt_id
+            
+            # Check for alternative URL formats
+            if "ecotrack.com/receipt/" in qr_data:
+                parts = qr_data.split("/receipt/")
+                if len(parts) > 1:
+                    return parts[1].split("?")[0].split("#")[0]  # Remove query params and fragments
+            
+            # Backward compatibility: Check old text format
             lines = qr_data.strip().split('\n')
             
-            # Look for Receipt ID line
+            # Look for Receipt ID line in old format
             for line in lines:
                 if line.startswith("Receipt ID:"):
                     return line.split("Receipt ID:")[1].strip()
             
             return None
             
+        except Exception:
+            return None
+
+    def extract_receipt_id_from_url(self, url: str) -> Optional[str]:
+        """
+        Extract receipt ID from various URL formats
+        Supports: 
+        - https://ecotrack.com/receipt/abc123
+        - https://ecotrack.com/receipt/abc123?param=value
+        - ecotrack.com/receipt/abc123
+        """
+        try:
+            if "/receipt/" in url:
+                parts = url.split("/receipt/")
+                if len(parts) > 1:
+                    receipt_id = parts[1].split("?")[0].split("#")[0]
+                    return receipt_id.strip()
+            return None
         except Exception:
             return None 

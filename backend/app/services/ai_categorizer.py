@@ -1,5 +1,5 @@
 """
-AI categorization service using Ollama with tinyllama for automatic expense categorization.
+AI categorization service using Ollama with qwen2.5:3b for automatic expense categorization.
 Provides intelligent category suggestions based on expense descriptions and merchant names.
 """
 
@@ -19,10 +19,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class AICategorizer:
-    """Service for AI-powered expense categorization using Ollama tinyllama"""
+    """Service for AI-powered expense categorization using Ollama qwen2.5:3b"""
     
     def __init__(self):
-        self.model_name = "tinyllama:latest"
+        self.model_name = "qwen2.5:3b"
         self.client = ollama.Client() if OLLAMA_AVAILABLE else None
         
         # Predefined categories with Turkish and English keywords
@@ -43,7 +43,7 @@ class AICategorizer:
                 'merchants': ['zara', 'h&m', 'lcw', 'teknosa', 'vatan', 'media markt']
             },
             'health_medical': {
-                'name': 'Health & Medical',
+                'name': 'Healthcare',
                 'keywords': ['pharmacy', 'hospital', 'doctor', 'medicine', 'eczane', 'hastane', 'doktor', 'ilaç'],
                 'merchants': ['eczane', 'pharmacy', 'hospital', 'hastane']
             },
@@ -67,10 +67,10 @@ class AICategorizer:
                 'keywords': ['cosmetic', 'beauty', 'hair', 'spa', 'kozmetik', 'güzellik', 'saç', 'berber'],
                 'merchants': ['sephora', 'gratis', 'watsons']
             },
-            'home_garden': {
-                'name': 'Home & Garden',
-                'keywords': ['furniture', 'home', 'garden', 'mobilya', 'ev', 'bahçe', 'dekorasyon'],
-                'merchants': ['ikea', 'koçtaş', 'bauhaus', 'istikbal']
+            'travel': {
+                'name': 'Travel',
+                'keywords': ['hotel', 'flight', 'vacation', 'trip', 'otel', 'uçak', 'tatil', 'seyahat'],
+                'merchants': ['booking', 'hotels.com', 'turkish airlines', 'pegasus']
             },
             'other': {
                 'name': 'Other',
@@ -84,7 +84,7 @@ class AICategorizer:
         self._check_model_availability()
 
     def _check_model_availability(self):
-        """Check if tinyllama model is available"""
+        """Check if qwen2.5:3b model is available"""
         if not OLLAMA_AVAILABLE or not self.client:
             self._model_available = False
             logger.warning("Ollama not available - AI categorization disabled")
@@ -107,11 +107,11 @@ class AICategorizer:
             
             if not self._model_available:
                 logger.warning(f"Model {self.model_name} not found. Available models: {available_models}")
-                logger.info("Attempting to pull tinyllama model...")
+                logger.info("Attempting to pull qwen2.5:3b model...")
                 try:
                     self.client.pull(self.model_name)
                     self._model_available = True
-                    logger.info("Successfully pulled tinyllama model")
+                    logger.info("Successfully pulled qwen2.5:3b model")
                 except Exception as e:
                     logger.error(f"Failed to pull model: {str(e)}")
             else:
@@ -243,45 +243,61 @@ class AICategorizer:
         }
 
     async def _ai_categorization(self, description: str, merchant_name: str = None, amount: float = None) -> Dict[str, Any]:
-        """AI-powered categorization using Ollama tinyllama"""
+        """AI-powered categorization using Ollama Qwen2.5:3B"""
         try:
             # Prepare context for AI
-            context = f"Description: {description}"
+            context_parts = []
+            if description:
+                context_parts.append(f"Description: {description}")
             if merchant_name:
-                context += f"\nMerchant: {merchant_name}"
+                context_parts.append(f"Merchant: {merchant_name}")
             if amount:
-                context += f"\nAmount: {amount}"
+                context_parts.append(f"Amount: {amount} TRY")
             
-            # Create prompt for categorization
+            context = "\n".join(context_parts)
+            
+            # Create improved prompt for Qwen2.5:3B
             categories_list = "\n".join([f"- {cat_id}: {cat_info['name']}" for cat_id, cat_info in self.categories.items()])
             
-            prompt = f"""
-You are an expense categorization assistant. Categorize the following expense into one of these categories:
+            prompt = f"""You are an expense categorization expert. Categorize the following expense into one of these categories:
 
+CATEGORIES:
 {categories_list}
 
-Expense details:
+EXPENSE INFORMATION:
 {context}
 
-Respond with only a JSON object in this format:
+IMPORTANT RULES:
+1. Respond ONLY in valid JSON format
+2. Do not provide any explanation outside JSON
+3. Select category IDs from the list above
+4. Confidence score must be between 0.0 and 1.0
+5. You can understand both Turkish and English inputs
+
+REQUIRED JSON FORMAT:
 {{"category": "category_id", "confidence": 0.85, "reasoning": "brief explanation"}}
 
-The confidence should be between 0.0 and 1.0.
-"""
+Now categorize:"""
 
-            # Call Ollama API
+            # Call Ollama API with optimized settings for Qwen2.5:3B
             response = self.client.chat(
                 model=self.model_name,
                 messages=[
+                    {
+                        'role': 'system',
+                        'content': 'You are an expense categorization expert. You respond only in valid JSON format.'
+                    },
                     {
                         'role': 'user',
                         'content': prompt
                     }
                 ],
+                format="json",  # Force JSON format
                 options={
-                    'temperature': 0.1,  # Low temperature for consistent results
-                    'top_p': 0.9,
-                    'num_predict': 100  # Limit response length
+                    'temperature': 0.1,  # Very low temperature for consistent results
+                    'top_p': 0.8,
+                    'num_predict': 120,  # Optimized for Qwen2.5
+                    'stop': ['\n\n', '```', 'Explanation:']  # Stop tokens
                 }
             )
             

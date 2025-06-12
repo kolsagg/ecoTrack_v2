@@ -245,11 +245,42 @@ API varsayılan olarak `http://localhost:8000` adresinde çalışacaktır.
 
 ### Sadakat Programı Endpoints
 
-- GET `/api/loyalty`: Kullanıcının tüm sadakat programlarını listeler
-- GET `/api/loyalty/{id}`: Belirli bir sadakat programının detaylarını getirir
-- POST `/api/loyalty`: Yeni sadakat programı ekler
-- PUT `/api/loyalty/{id}`: Mevcut sadakat programını günceller
-- DELETE `/api/loyalty/{id}`: Sadakat programını siler
+- GET `/api/v1/loyalty/status`: Kullanıcının sadakat durumunu getirir (puan, seviye, ilerleme)
+- GET `/api/v1/loyalty/calculate-points`: Belirli bir harcama için puan hesaplar
+- GET `/api/v1/loyalty/history`: Kullanıcının sadakat puan geçmişini listeler
+- GET `/api/v1/loyalty/levels`: Sadakat seviyelerini ve avantajlarını listeler
+
+### Merchant Integration Endpoints
+
+- POST `/api/v1/merchants`: Yeni merchant partner kaydı (admin only)
+- GET `/api/v1/merchants`: Merchant partner listesi (admin only)
+- PUT `/api/v1/merchants/{id}`: Merchant bilgilerini günceller (admin only)
+- DELETE `/api/v1/merchants/{id}`: Merchant partnership'i deaktive eder (admin only)
+- POST `/api/v1/merchants/{id}/regenerate-api-key`: API key yeniler (admin only)
+
+### Webhook Endpoints
+
+- POST `/api/v1/webhooks/merchant/{id}/transaction`: Merchant POS sistemlerinden real-time transaction data
+- POST `/api/v1/webhooks/merchant/{id}/test-transaction`: Test endpoint for merchant integration
+- GET `/api/v1/webhooks/merchant/{id}/logs`: Webhook delivery logs
+- POST `/api/v1/webhooks/logs/{id}/retry`: Retry failed webhook deliveries
+- GET `/api/v1/webhooks/merchant/{id}/stats`: Webhook statistics
+
+### AI Analysis Endpoints
+
+- GET `/api/suggestions/savings`: Kişiselleştirilmiş tasarruf önerileri
+- GET `/api/suggestions/budget`: Bütçe planlama önerileri
+- GET `/api/analytics/summary`: Kapsamlı harcama analizi özeti
+
+### Financial Reporting Endpoints
+
+- GET `/api/reports/spending-distribution`: Harcama dağılımı (kategori/merchant bazlı)
+- GET `/api/reports/spending-trends`: Zaman serisi harcama trendleri
+- GET `/api/reports/category-spending-over-time`: Kategori bazlı zaman içi harcama
+- GET `/api/reports/budget-vs-actual`: Bütçe vs gerçek harcama karşılaştırması
+- GET `/api/reports/dashboard`: Dashboard için kapsamlı veri
+- GET `/api/reports/export`: Raporları farklı formatlarda export
+- GET `/api/reports/custom`: Özelleştirilebilir raporlar
 
 ### Öneriler Endpoints
 

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack Digital Receipt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .receipt-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #0891b2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .merchant-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .receipt-info {
+            opacity: 0.9;
+            font-size: 16px;
+            font-weight: 400;
+        }
+        
+        .receipt-details {
+            padding: 30px;
+            background: #fafbfc;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            font-size: 15px;
+            color: #4a5568;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .items-section {
+            padding: 30px;
+        }
+        
+        .items-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+        
+        .item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        
+        .item-details {
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        .item-price {
+            font-weight: 700;
+            color: #2d3748;
+            text-align: right;
+            font-size: 16px;
+        }
+        
+        .item-unit-price {
+            font-size: 13px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+        
+        .item-kdv {
+            font-size: 12px;
+            color: #059669;
+            display: block;
+            margin-top: 2px;
+        }
+        
+        .total-section {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #10b981 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .total-label {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .total-amount {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        
+        .payment-section {
+            background: #edf2f7;
+            padding: 25px 30px;
+            color: #2d3748;
+        }
+        
+        .payment-method {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .tax-section {
+            padding: 30px;
+            background: #f7fafc;
+        }
+        
+        .tax-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .tax-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .tax-table th,
+        .tax-table td {
+            padding: 12px 8px;
+            text-align: right;
+            font-size: 14px;
+        }
+        
+        .tax-table th {
+            background: #e2e8f0;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .tax-table td {
+            color: #4a5568;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tax-table .total-row {
+            font-weight: 700;
+            color: #2d3748;
+            background: #edf2f7;
+        }
+        
+        .review-section {
+            padding: 40px 30px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .review-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 30px;
+            line-height: 1.3;
+        }
+        
+        .merchant-rating {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 12px;
+        }
+        
+        .star-rating {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .star {
+            width: 44px;
+            height: 44px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            font-size: 20px;
+        }
+        
+        .star:hover,
+        .star.active {
+            background: linear-gradient(135deg, #10b981 0%, #0891b2 100%);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .star::before {
+            content: "★";
+            color: #a0aec0;
+        }
+        
+        .star.active::before,
+        .star:hover::before {
+            color: white;
+        }
+        
+        .comment-section {
+            margin-top: 25px;
+        }
+        
+        .comment-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 15px;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+        
+        .comment-textarea:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .submit-review-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #0891b2 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .submit-review-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .submit-review-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .existing-reviews {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .reviews-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .review-item {
+            padding: 20px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+        
+        .review-item:last-child {
+            border-bottom: none;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .reviewer-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .review-date {
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        
+        .review-stars {
+            color: #10b981;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .review-comment {
+            color: #4a5568;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .app-download {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #10b981 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .app-download h3 {
+            margin-bottom: 12px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .app-download p {
+            margin-bottom: 25px;
+            opacity: 0.9;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .download-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .download-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 15px 25px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+        }
+        
+        .download-btn:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+            font-size: 14px;
+            background: #f7fafc;
+        }
+        
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+            border: 1px solid #10b981;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+            border: 1px solid #feb2b2;
+        }
+        
+        /* Desktop Responsive */
+        @media (min-width: 768px) {
+            body {
+                padding: 40px;
+            }
+            
+            .container {
+                max-width: 800px;
+            }
+            
+            .receipt-header {
+                padding: 50px 40px;
+            }
+            
+            .merchant-name {
+                font-size: 32px;
+            }
+            
+            .receipt-info {
+                font-size: 18px;
+            }
+            
+            .receipt-details,
+            .items-section,
+            .review-section {
+                padding: 40px;
+            }
+            
+            .total-section {
+                padding: 50px 40px;
+            }
+            
+            .total-amount {
+                font-size: 48px;
+            }
+            
+            .payment-section {
+                padding: 30px 40px;
+            }
+            
+            .tax-section {
+                padding: 40px;
+            }
+            
+            .app-download {
+                padding: 50px 40px;
+            }
+            
+            .download-buttons {
+                gap: 20px;
+            }
+            
+            .download-btn {
+                padding: 18px 30px;
+                font-size: 16px;
+            }
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 12px;
+            }
+            
+            .receipt-header {
+                padding: 30px 20px;
+            }
+            
+            .merchant-name {
+                font-size: 24px;
+            }
+            
+            .receipt-details,
+            .items-section,
+            .review-section {
+                padding: 20px;
+            }
+            
+            .total-section {
+                padding: 30px 20px;
+            }
+            
+            .total-amount {
+                font-size: 36px;
+            }
+            
+            .payment-section,
+            .tax-section {
+                padding: 20px;
+            }
+            
+            .star {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            
+            .app-download {
+                padding: 30px 20px;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .download-btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Receipt Header -->
+        <div class="receipt-header">
+            <div class="merchant-name">{{ merchant_name or "Demo Coffee Shop" }}</div>
+            <div class="receipt-info">
+                <div id="header-date">{{ formatted_date or transaction_date or "08.06.2025 12:56" }}</div>
+                <div>Receipt No.: {{ receipt_id or "c3c8a14d-93a1-4e58-a4c0-800558756e5f" }}</div>
+            </div>
+        </div>
+        
+        <!-- Receipt Details -->
+        <div class="receipt-details">
+            <div class="detail-row">
+                <span class="detail-label">Date:</span>
+                <span id="formatted-date">{{ formatted_date or transaction_date or "08.06.2025 12:56" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Receipt ID:</span>
+                <span>{{ receipt_id or "c3c8a14d-93a1-4e58-a4c0-800558756e5f" }}</span>
+            </div>
+        </div>
+        
+        <!-- Items Section -->
+        <div class="items-section">
+            <h3 class="items-title">Items</h3>
+            {% if items and items|length > 0 %}
+                {% for item in items %}
+                <div class="item">
+                    <div class="item-info">
+                        <div class="item-name">{{ item.description or item.name or "Item" }}</div>
+                        <div class="item-details">
+                            {{ item.quantity or 1 }} pcs
+                            {% if item.unit_price %}
+                                <span class="item-unit-price">{{ "%.2f"|format(item.unit_price) }} {{ currency or "TRY" }} / pc</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="item-price">
+                        <div>{{ "%.2f"|format(item.amount or item.total_price or 0) }} {{ currency or "TRY" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="item">
+                    <div class="item-info">
+                        <div class="item-name">Americano Coffee</div>
+                        <div class="item-details">
+                            2 pcs
+                            <span class="item-unit-price">18.5 TRY / pc</span>
+                        </div>
+                    </div>
+                    <div class="item-price">
+                        <div>37.0 TRY</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <div class="item-info">
+                        <div class="item-name">Croissant</div>
+                        <div class="item-details">1 pc</div>
+                    </div>
+                    <div class="item-price">
+                        <div>25.5 TRY</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <div class="item-info">
+                        <div class="item-name">Service Fee</div>
+                        <div class="item-details">1 pc</div>
+                    </div>
+                    <div class="item-price">
+                        <div>25.0 TRY</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Total Section -->
+        <div class="total-section">
+            <div class="total-label">TOTAL</div>
+            <div class="total-amount">{{ "%.2f"|format(total_amount or 87.5) }} {{ currency or "TRY" }}</div>
+        </div>
+        
+        <!-- Payment Section -->
+        <div class="payment-section">
+            <div class="payment-method">
+                <span>Card (* 0021)</span>
+                <span>{{ "%.2f"|format(total_amount or 87.5) }} {{ currency or "TRY" }}</span>
+            </div>
+        </div>
+        
+        <!-- Tax Section -->
+        <div class="tax-section">
+            <h3 class="tax-title">Tax Details</h3>
+            <table class="tax-table">
+                <thead>
+                    <tr>
+                        <th>KDV</th>
+                        <th>Without tax</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="kdv-breakdown">
+                    <!-- KDV breakdown will be populated by backend -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Review Section -->
+        <div class="review-section">
+            <h3 class="review-title">How did you enjoy your order at {{ merchant_name or "Demo Coffee Shop" }}?</h3>
+            
+            <div class="merchant-rating" id="merchant-rating" style="display: none;">
+                <!-- Merchant rating will be loaded here -->
+            </div>
+            
+            <div class="success-message" id="success-message">
+                Your review has been submitted successfully! Thank you.
+            </div>
+            
+            <div class="error-message" id="error-message">
+                An error occurred. Please try again.
+            </div>
+            
+            <div id="review-form">
+                <div class="star-rating" id="star-rating">
+                    <span class="star" data-rating="1"></span>
+                    <span class="star" data-rating="2"></span>
+                    <span class="star" data-rating="3"></span>
+                    <span class="star" data-rating="4"></span>
+                    <span class="star" data-rating="5"></span>
+                </div>
+                
+                <div class="comment-section">
+                    <textarea 
+                        class="comment-textarea" 
+                        id="review-comment" 
+                        placeholder="Share your experience... (optional)"
+                        maxlength="500"
+                    ></textarea>
+                </div>
+                
+                <button class="submit-review-btn" id="submit-review" disabled>
+                    Submit Review
+                </button>
+            </div>
+            
+            <!-- Existing Reviews -->
+            <div class="existing-reviews" id="existing-reviews">
+                <h4 class="reviews-title">Other Reviews</h4>
+                <div id="reviews-list">
+                    <!-- Reviews will be loaded here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- App Download Section -->
+        <div class="app-download">
+            <h3>EcoTrack App</h3>
+            <p>Download the EcoTrack app to view this receipt in your app and track your expenses!</p>
+            <div class="download-buttons">
+                <a href="#" class="download-btn">
+                    App Store
+                </a>
+                <a href="#" class="download-btn">
+                    Google Play
+                </a>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>EcoTrack © 2024 - Smart Expense Tracking</p>
+            <p>This digital receipt was generated by the EcoTrack system.</p>
+        </div>
+    </div>
+    
+    <script>
+        let selectedRating = 0;
+        const receiptId = '{{ receipt_id }}';
+        
+        // Star rating functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const stars = document.querySelectorAll('.star');
+            const submitBtn = document.getElementById('submit-review');
+            
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    selectedRating = parseInt(this.dataset.rating);
+                    updateStars();
+                    submitBtn.disabled = false;
+                });
+                
+                star.addEventListener('mouseenter', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    highlightStars(rating);
+                });
+            });
+            
+            document.getElementById('star-rating').addEventListener('mouseleave', function() {
+                updateStars();
+            });
+            
+            // Submit review
+            submitBtn.addEventListener('click', submitReview);
+            
+            // Load existing reviews
+            loadReviews();
+            
+            // Format date
+            formatDate();
+        });
+        
+        function updateStars() {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                if (index < selectedRating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+        
+        function highlightStars(rating) {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+        
+        async function submitReview() {
+            if (selectedRating === 0) return;
+            
+            const comment = document.getElementById('review-comment').value.trim();
+            const submitBtn = document.getElementById('submit-review');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch(`/api/v1/reviews/receipts/${receiptId}/review/anonymous`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        rating: selectedRating,
+                        comment: comment || null,
+                        is_anonymous: true,
+                        reviewer_name: 'Anonymous User'
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('success', 'Your review has been submitted successfully! Thank you.');
+                    document.getElementById('review-form').style.display = 'none';
+                    loadReviews();
+                } else {
+                    const errorData = await response.json();
+                    if (response.status === 400 && errorData.detail && errorData.detail.includes('already reviewed')) {
+                        showMessage('error', 'You have already reviewed this merchant.');
+                    } else {
+                        throw new Error('Failed to submit review');
+                    }
+                }
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                showMessage('error', 'An error occurred. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+            }
+        }
+        
+        async function loadReviews() {
+            try {
+                // Get merchant ID from receipt first
+                const receiptResponse = await fetch(`/api/v1/receipts/public/${receiptId}`);
+                if (receiptResponse.ok) {
+                    const receiptData = await receiptResponse.json();
+                    const merchantId = receiptData.merchant_id;
+                    
+                    if (merchantId) {
+                        // Load merchant reviews
+                        const reviewsResponse = await fetch(`/api/v1/reviews/merchants/${merchantId}/reviews?limit=5`);
+                        if (reviewsResponse.ok) {
+                            const reviewsData = await reviewsResponse.json();
+                            displayReviews(reviewsData.recent_reviews || []);
+                            displayMerchantRating(reviewsData.merchant_rating);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+                // Show placeholder message if reviews can't be loaded
+                const reviewsList = document.getElementById('reviews-list');
+                reviewsList.innerHTML = '<p style="color: #a0aec0; text-align: center;">Reviews could not be loaded.</p>';
+            }
+        }
+        
+        function displayReviews(reviews) {
+            const reviewsList = document.getElementById('reviews-list');
+            
+            if (!reviews || reviews.length === 0) {
+                reviewsList.innerHTML = '<p style="color: #a0aec0; text-align: center;">No reviews yet. Be the first to review!</p>';
+                return;
+            }
+            
+            reviewsList.innerHTML = reviews.map(review => `
+                <div class="review-item">
+                    <div class="review-header">
+                        <span class="reviewer-name">${review.reviewer_name || 'Anonymous'}</span>
+                        <span class="review-date">${formatReviewDate(review.created_at)}</span>
+                    </div>
+                    <div class="review-stars">${'★'.repeat(review.rating)}</div>
+                    ${review.comment ? `<div class="review-comment">${review.comment}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function displayMerchantRating(merchantRating) {
+            if (merchantRating && merchantRating.total_reviews > 0) {
+                const ratingDiv = document.getElementById('merchant-rating');
+                ratingDiv.innerHTML = `
+                    <div style="font-size: 16px; color: #2d3748; margin-bottom: 5px;">
+                        <strong>Merchant Rating</strong>
+                    </div>
+                    <div style="font-size: 18px; color: #10b981;">
+                        ★ ${merchantRating.average_rating}/5 (${merchantRating.total_reviews} reviews)
+                    </div>
+                `;
+                ratingDiv.style.display = 'block';
+            }
+        }
+        
+        function showMessage(type, message) {
+            const successMsg = document.getElementById('success-message');
+            const errorMsg = document.getElementById('error-message');
+            
+            if (type === 'success') {
+                successMsg.textContent = message;
+                successMsg.style.display = 'block';
+                errorMsg.style.display = 'none';
+            } else {
+                errorMsg.textContent = message;
+                errorMsg.style.display = 'block';
+                successMsg.style.display = 'none';
+            }
+            
+            setTimeout(() => {
+                successMsg.style.display = 'none';
+                errorMsg.style.display = 'none';
+            }, 5000);
+        }
+        
+        function formatDate() {
+            const dateElements = [
+                document.getElementById('header-date'),
+                document.getElementById('formatted-date')
+            ];
+            
+            dateElements.forEach(dateElement => {
+                if (dateElement && dateElement.textContent) {
+                    try {
+                        const dateText = dateElement.textContent.trim();
+                        
+                        // Check if it's already in Turkish format (DD.MM.YYYY HH:MM)
+                        if (dateText.match(/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/)) {
+                            // Already in correct format, don't change
+                            return;
+                        }
+                        
+                        // Try to parse different date formats
+                        let date;
+                        
+                        // Try ISO format first (from backend)
+                        if (dateText.includes('T') || dateText.includes('Z')) {
+                            date = new Date(dateText);
+                        }
+                        // Try DD.MM.YYYY format
+                        else if (dateText.match(/^\d{2}\.\d{2}\.\d{4}/)) {
+                            const parts = dateText.split(' ');
+                            const datePart = parts[0];
+                            const timePart = parts[1] || '00:00';
+                            
+                            const [day, month, year] = datePart.split('.');
+                            const [hours, minutes] = timePart.split(':');
+                            
+                            // Create date with correct order: year, month-1, day
+                            date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 
+                                          parseInt(hours) || 0, parseInt(minutes) || 0);
+                        }
+                        else {
+                            // Fallback to default parsing
+                            date = new Date(dateText);
+                        }
+                        
+                        if (!isNaN(date.getTime())) {
+                            // Turkish 24-hour format: DD.MM.YYYY HH:MM
+                            const day = date.getDate().toString().padStart(2, '0');
+                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                            const year = date.getFullYear();
+                            const hours = date.getHours().toString().padStart(2, '0');
+                            const minutes = date.getMinutes().toString().padStart(2, '0');
+                            
+                            dateElement.textContent = `${day}.${month}.${year} ${hours}:${minutes}`;
+                        }
+                    } catch (e) {
+                        console.log('Date formatting failed:', e);
+                    }
+                }
+            });
+        }
+        
+        function formatReviewDate(dateString) {
+            try {
+                // Parse ISO date string correctly (from backend)
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffTime = Math.abs(now - date);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 1) {
+                    return 'Yesterday';
+                } else if (diffDays < 7) {
+                    return `${diffDays} days ago`;
+                } else {
+                    // Turkish date format: DD.MM.YYYY
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}.${month}.${year}`;
+                }
+            } catch (e) {
+                return 'Unknown';
+            }
+        }
+        
+
+    </script>
+</body>
+</html> 

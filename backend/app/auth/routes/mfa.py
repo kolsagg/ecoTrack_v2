@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any, Optional
 from app.auth.services.mfa_service import mfa_service
+from app.core.auth import get_current_user
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -14,18 +15,18 @@ class DisableTOTPRequest(BaseModel):
     code: str
 
 @router.get("/mfa/status", response_model=Dict[str, Any])
-async def get_mfa_status() -> Dict[str, Any]:
+async def get_mfa_status(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Get MFA status for the current user.
     """
-    return await mfa_service.get_mfa_status()
+    return await mfa_service.get_mfa_status(current_user)
 
 @router.get("/mfa/factors", response_model=Dict[str, Any])
-async def list_factors() -> Dict[str, Any]:
+async def list_factors(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     List all MFA factors for the current user.
     """
-    return await mfa_service.list_mfa_factors()
+    return await mfa_service.list_mfa_factors(current_user)
 
 @router.post("/mfa/totp/create", response_model=Dict[str, Any])
 async def create_totp() -> Dict[str, Any]:

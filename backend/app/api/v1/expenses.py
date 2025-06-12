@@ -15,12 +15,15 @@ from app.schemas.data_processing import (
 )
 from app.services.data_processor import DataProcessor
 from app.services.qr_generator import QRGenerator
+from app.services.loyalty_service import LoyaltyService
 from app.db.supabase_client import get_authenticated_supabase_client, get_authenticated_supabase_client
+from app.utils.kdv_calculator import KDVCalculator
 from supabase import Client
 
 router = APIRouter()
 data_processor = DataProcessor()
 qr_generator = QRGenerator()
+loyalty_service = LoyaltyService()
 
 @router.post("", response_model=ExpenseResponse)
 async def create_manual_expense(
@@ -74,26 +77,52 @@ async def create_manual_expense(
         for item_request in request.items:
             # Use AI categorizer for each item
             suggested_category = await data_processor.ai_categorizer.categorize_expense(
-                description=item_request.description,
+                description=item_request.item_name,
                 merchant_name=request.merchant_name,
                 amount=item_request.amount
             )
             
+            # Debug: Print AI categorization result
+            print(f"AI categorization for '{item_request.item_name}': {suggested_category}")
+            
+            # Use AI category if no category provided by user
+            final_category_id = item_request.category_id
+            if not final_category_id and suggested_category:
+                # Convert AI category name to category_id by looking up in database
+                ai_category_name = suggested_category.get("category_name")
+                if ai_category_name:
+                    category_lookup = supabase.table("categories").select("id").eq("name", ai_category_name).execute()
+                    if category_lookup.data:
+                        final_category_id = category_lookup.data[0]["id"]
+                        print(f"Using AI suggested category: {ai_category_name} (ID: {final_category_id})")
+                    else:
+                        print(f"AI suggested category '{ai_category_name}' not found in database")
+                else:
+                    print("AI categorization did not return category_name")
+            else:
+                print(f"Using user provided category: {final_category_id}")
+            
+            # Calculate unit_price if not provided
+            unit_price = item_request.unit_price
+            if unit_price is None and item_request.quantity and item_request.quantity > 0:
+                unit_price = item_request.amount / item_request.quantity
+            
             item_data = {
                 "expense_id": expense_id,
                 "user_id": current_user["id"],
-                "category_id": item_request.category_id or suggested_category.get("category_id"),
-                "description": item_request.description,
+                "category_id": final_category_id,
+                "description": item_request.item_name,
                 "amount": item_request.amount,
                 "quantity": item_request.quantity,
-                "unit_price": item_request.unit_price,
+                "unit_price": unit_price,
+                "kdv_rate": item_request.kdv_rate,
                 "notes": item_request.notes
             }
             
             item_response = supabase.table("expense_items").insert(item_data).execute()
             
             if not item_response.data:
-                raise HTTPException(status_code=500, detail=f"Failed to create expense item: {item_request.description}")
+                raise HTTPException(status_code=500, detail=f"Failed to create expense item: {item_request.item_name}")
             
             item = item_response.data[0]
             
@@ -104,15 +133,22 @@ async def create_manual_expense(
                 if category_response.data:
                     category_name = category_response.data[0]["name"]
             
+            # Calculate KDV breakdown
+            kdv_rate = item.get("kdv_rate", 20.0)
+            kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+            
             expense_items.append(ExpenseItemResponse(
                 id=item["id"],
                 expense_id=item["expense_id"],
                 category_id=item["category_id"],
                 category_name=category_name,
-                description=item["description"],
+                item_name=item["description"],
                 amount=item["amount"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                kdv_rate=kdv_rate,
+                kdv_amount=kdv_breakdown["kdv_amount"],
+                amount_without_kdv=kdv_breakdown["amount_without_kdv"],
                 notes=item["notes"],
                 created_at=item["created_at"],
                 updated_at=item["updated_at"]
@@ -128,12 +164,40 @@ async def create_manual_expense(
             transaction_date=datetime.fromisoformat(receipt["transaction_date"].replace('Z', '+00:00'))
         )
         
+        # Award loyalty points for the expense
+        try:
+            # Get the primary category from the first item (or most expensive item)
+            primary_category = None
+            if expense_items:
+                # Find the item with highest amount for primary category
+                max_amount_item = max(expense_items, key=lambda x: x.amount)
+                if max_amount_item.category_id:
+                    category_response = supabase.table("categories").select("name").eq("id", max_amount_item.category_id).execute()
+                    if category_response.data:
+                        primary_category = category_response.data[0]["name"]
+            
+            loyalty_result = await loyalty_service.award_points_for_expense(
+                user_id=current_user["id"],
+                expense_id=expense["id"],
+                amount=total_amount,
+                category=primary_category,
+                merchant_name=request.merchant_name
+            )
+            
+            if loyalty_result["success"]:
+                print(f"Loyalty points awarded: {loyalty_result['points_awarded']} points")
+                
+        except Exception as loyalty_error:
+            # Don't fail the expense creation if loyalty points fail
+            print(f"Failed to award loyalty points: {str(loyalty_error)}")
+        
         return ExpenseResponse(
             id=expense["id"],
             receipt_id=receipt_id,
             total_amount=expense["total_amount"],
             expense_date=expense["expense_date"],
             notes=expense["notes"],
+            merchant_name=request.merchant_name,
             items=expense_items,
             qr_code=qr_code,
             created_at=expense["created_at"],
@@ -153,7 +217,7 @@ async def list_expenses(
     min_amount: Optional[float] = Query(None, description="Minimum amount filter"),
     max_amount: Optional[float] = Query(None, description="Maximum amount filter"),
     sort_by: str = Query("expense_date", description="Sort field"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
     current_user: dict = Depends(get_current_user),
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
@@ -234,13 +298,17 @@ async def get_expense(
     Get a specific expense by ID with all items
     """
     try:
-        # Get expense summary
-        expense_response = supabase.table("expenses").select("*").eq("id", str(expense_id)).execute()
+        # Get expense summary with receipt info
+        expense_response = supabase.table("expenses").select("""
+            *,
+            receipts(merchant_name, source)
+        """).eq("id", str(expense_id)).execute()
         
         if not expense_response.data:
             raise HTTPException(status_code=404, detail="Expense not found")
         
         expense = expense_response.data[0]
+        merchant_name = expense.get("receipts", {}).get("merchant_name")
         
         # Get expense items with categories
         items_response = supabase.table("expense_items").select("""
@@ -252,15 +320,22 @@ async def get_expense(
         for item in items_response.data:
             category_name = item.get("categories", {}).get("name") if item.get("categories") else None
             
+            # Calculate KDV breakdown
+            kdv_rate = item.get("kdv_rate", 20.0)
+            kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+            
             expense_items.append(ExpenseItemResponse(
                 id=item["id"],
                 expense_id=item["expense_id"],
                 category_id=item["category_id"],
                 category_name=category_name,
-                description=item["description"],
+                item_name=item["description"],
                 amount=item["amount"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                kdv_rate=kdv_rate,
+                kdv_amount=kdv_breakdown["kdv_amount"],
+                amount_without_kdv=kdv_breakdown["amount_without_kdv"],
                 notes=item["notes"],
                 created_at=item["created_at"],
                 updated_at=item["updated_at"]
@@ -272,6 +347,7 @@ async def get_expense(
             total_amount=expense["total_amount"],
             expense_date=expense["expense_date"],
             notes=expense["notes"],
+            merchant_name=merchant_name,
             items=expense_items,
             qr_code=None,  # QR code can be generated on demand
             created_at=expense["created_at"],
@@ -295,10 +371,19 @@ async def update_expense(
     """
     try:
         # Check if expense exists and belongs to user
-        existing_response = supabase.table("expenses").select("*").eq("id", str(expense_id)).execute()
+        existing_response = supabase.table("expenses").select("""
+            *,
+            receipts(source)
+        """).eq("id", str(expense_id)).execute()
         
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check if expense is manually created (only manual expenses can be updated)
+        expense = existing_response.data[0]
+        receipt_source = expense.get("receipts", {}).get("source")
+        if receipt_source != "manual_entry":
+            raise HTTPException(status_code=403, detail="Only manually created expenses can be updated")
         
         # Prepare update data (only include non-None values)
         update_data = {}
@@ -307,18 +392,37 @@ async def update_expense(
         if request.notes is not None:
             update_data["notes"] = request.notes
         
-        if not update_data:
+        # Update merchant name in receipt if provided
+        receipt_update_data = {}
+        if request.merchant_name is not None:
+            receipt_update_data["merchant_name"] = request.merchant_name
+        
+        if not update_data and not receipt_update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
         
-        update_data["updated_at"] = datetime.now().isoformat()
+        # Update expense if there's expense data to update
+        if update_data:
+            update_data["updated_at"] = datetime.now().isoformat()
+            response = supabase.table("expenses").update(update_data).eq("id", str(expense_id)).execute()
+            
+            if not response.data:
+                raise HTTPException(status_code=500, detail="Failed to update expense")
+            
+            expense = response.data[0]
+        else:
+            expense = existing_response.data[0]
         
-        # Update expense
-        response = supabase.table("expenses").update(update_data).eq("id", str(expense_id)).execute()
+        # Update receipt if merchant name is provided
+        if receipt_update_data:
+            receipt_update_data["updated_at"] = datetime.now().isoformat()
+            receipt_response = supabase.table("receipts").update(receipt_update_data).eq("id", expense["receipt_id"]).execute()
+            
+            if not receipt_response.data:
+                raise HTTPException(status_code=500, detail="Failed to update merchant name")
         
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to update expense")
-        
-        expense = response.data[0]
+        # Get current merchant name from receipt
+        receipt_response = supabase.table("receipts").select("merchant_name").eq("id", expense["receipt_id"]).execute()
+        merchant_name = receipt_response.data[0]["merchant_name"] if receipt_response.data else None
         
         # Get expense items with categories
         items_response = supabase.table("expense_items").select("""
@@ -330,15 +434,22 @@ async def update_expense(
         for item in items_response.data:
             category_name = item.get("categories", {}).get("name") if item.get("categories") else None
             
+            # Calculate KDV breakdown
+            kdv_rate = item.get("kdv_rate", 20.0)
+            kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+            
             expense_items.append(ExpenseItemResponse(
                 id=item["id"],
                 expense_id=item["expense_id"],
                 category_id=item["category_id"],
                 category_name=category_name,
-                description=item["description"],
+                item_name=item["description"],
                 amount=item["amount"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                kdv_rate=kdv_rate,
+                kdv_amount=kdv_breakdown["kdv_amount"],
+                amount_without_kdv=kdv_breakdown["amount_without_kdv"],
                 notes=item["notes"],
                 created_at=item["created_at"],
                 updated_at=item["updated_at"]
@@ -350,6 +461,7 @@ async def update_expense(
             total_amount=expense["total_amount"],
             expense_date=expense["expense_date"],
             notes=expense["notes"],
+            merchant_name=merchant_name,
             items=expense_items,
             qr_code=None,
             created_at=expense["created_at"],
@@ -372,10 +484,19 @@ async def delete_expense(
     """
     try:
         # Check if expense exists and belongs to user
-        existing_response = supabase.table("expenses").select("*").eq("id", str(expense_id)).execute()
+        existing_response = supabase.table("expenses").select("""
+            *,
+            receipts(source)
+        """).eq("id", str(expense_id)).execute()
         
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check if expense is manually created (only manual expenses can be deleted)
+        expense = existing_response.data[0]
+        receipt_source = expense.get("receipts", {}).get("source")
+        if receipt_source != "manual_entry":
+            raise HTTPException(status_code=403, detail="Only manually created expenses can be deleted")
         
         # Delete expense items first (due to foreign key constraint)
         items_response = supabase.table("expense_items").delete().eq("expense_id", str(expense_id)).execute()
@@ -407,10 +528,19 @@ async def create_expense_item(
     """
     try:
         # Check if expense exists and belongs to user
-        expense_response = supabase.table("expenses").select("*").eq("id", str(expense_id)).execute()
+        expense_response = supabase.table("expenses").select("""
+            *,
+            receipts(source)
+        """).eq("id", str(expense_id)).execute()
         
         if not expense_response.data:
             raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check if expense is manually created (only manual expenses can have items added)
+        expense = expense_response.data[0]
+        receipt_source = expense.get("receipts", {}).get("source")
+        if receipt_source != "manual_entry":
+            raise HTTPException(status_code=403, detail="Items can only be added to manually created expenses")
         
         # Use AI categorizer if no category provided
         category_id = request.category_id
@@ -420,21 +550,35 @@ async def create_expense_item(
             merchant_name = receipt_response.data[0]["merchant_name"] if receipt_response.data else None
             
             suggested_category = await data_processor.ai_categorizer.categorize_expense(
-                description=request.description,
+                description=request.item_name,
                 merchant_name=merchant_name,
                 amount=request.amount
             )
-            category_id = suggested_category.get("category_id")
+            
+            # Convert AI category name to category_id
+            category_id = None
+            if suggested_category:
+                ai_category_name = suggested_category.get("category_name")
+                if ai_category_name:
+                    category_lookup = supabase.table("categories").select("id").eq("name", ai_category_name).execute()
+                    if category_lookup.data:
+                        category_id = category_lookup.data[0]["id"]
+        
+        # Calculate unit_price if not provided
+        unit_price = request.unit_price
+        if unit_price is None and request.quantity and request.quantity > 0:
+            unit_price = request.amount / request.quantity
         
         # Create expense item
         item_data = {
             "expense_id": str(expense_id),
             "user_id": current_user["id"],
             "category_id": category_id,
-            "description": request.description,
+            "description": request.item_name,
             "amount": request.amount,
             "quantity": request.quantity,
-            "unit_price": request.unit_price,
+            "unit_price": unit_price,
+            "kdv_rate": request.kdv_rate,
             "notes": request.notes
         }
         
@@ -458,15 +602,22 @@ async def create_expense_item(
             if category_response.data:
                 category_name = category_response.data[0]["name"]
         
+        # Calculate KDV breakdown
+        kdv_rate = item.get("kdv_rate", 20.0)
+        kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+        
         return ExpenseItemResponse(
             id=item["id"],
             expense_id=item["expense_id"],
             category_id=item["category_id"],
             category_name=category_name,
-            description=item["description"],
+            item_name=item["description"],
             amount=item["amount"],
             quantity=item["quantity"],
             unit_price=item["unit_price"],
+            kdv_rate=kdv_rate,
+            kdv_amount=kdv_breakdown["kdv_amount"],
+            amount_without_kdv=kdv_breakdown["amount_without_kdv"],
             notes=item["notes"],
             created_at=item["created_at"],
             updated_at=item["updated_at"]
@@ -493,20 +644,50 @@ async def update_expense_item(
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Expense item not found")
         
+        # Check if expense is manually created (only manual expenses can have items updated)
+        expense_response = supabase.table("expenses").select("""
+            *,
+            receipts(source)
+        """).eq("id", str(expense_id)).execute()
+        
+        if expense_response.data:
+            expense = expense_response.data[0]
+            receipt_source = expense.get("receipts", {}).get("source")
+            if receipt_source != "manual_entry":
+                raise HTTPException(status_code=403, detail="Items can only be updated in manually created expenses")
+        
         # Prepare update data
         update_data = {}
         if request.category_id is not None:
             update_data["category_id"] = request.category_id
-        if request.description is not None:
-            update_data["description"] = request.description
+        if request.item_name is not None:
+            update_data["description"] = request.item_name
         if request.amount is not None:
             update_data["amount"] = request.amount
         if request.quantity is not None:
             update_data["quantity"] = request.quantity
         if request.unit_price is not None:
             update_data["unit_price"] = request.unit_price
+        if request.kdv_rate is not None:
+            update_data["kdv_rate"] = request.kdv_rate
         if request.notes is not None:
             update_data["notes"] = request.notes
+        
+        # Calculate unit_price if not provided but amount and quantity are being updated
+        if request.unit_price is None and request.amount is not None and request.quantity is not None and request.quantity > 0:
+            update_data["unit_price"] = request.amount / request.quantity
+        elif request.unit_price is None and request.amount is not None and request.quantity is None:
+            # If only amount is updated, get current quantity to calculate unit_price
+            current_item = existing_response.data[0]
+            current_quantity = current_item.get("quantity")
+            if current_quantity and current_quantity > 0:
+                update_data["unit_price"] = request.amount / current_quantity
+        elif request.unit_price is None and request.amount is None and request.quantity is not None and request.quantity > 0:
+            # If only quantity is updated, get current amount to calculate unit_price
+            current_item = existing_response.data[0]
+            current_amount = current_item.get("amount")
+            if current_amount:
+                update_data["unit_price"] = current_amount / request.quantity
         
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
@@ -534,15 +715,22 @@ async def update_expense_item(
             if category_response.data:
                 category_name = category_response.data[0]["name"]
         
+        # Calculate KDV breakdown
+        kdv_rate = item.get("kdv_rate", 20.0)
+        kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+        
         return ExpenseItemResponse(
             id=item["id"],
             expense_id=item["expense_id"],
             category_id=item["category_id"],
             category_name=category_name,
-            description=item["description"],
+            item_name=item["description"],
             amount=item["amount"],
             quantity=item["quantity"],
             unit_price=item["unit_price"],
+            kdv_rate=kdv_rate,
+            kdv_amount=kdv_breakdown["kdv_amount"],
+            amount_without_kdv=kdv_breakdown["amount_without_kdv"],
             notes=item["notes"],
             created_at=item["created_at"],
             updated_at=item["updated_at"]
@@ -567,6 +755,18 @@ async def delete_expense_item(
         
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Expense item not found")
+        
+        # Check if expense is manually created (only manual expenses can have items deleted)
+        expense_response = supabase.table("expenses").select("""
+            *,
+            receipts(source)
+        """).eq("id", str(expense_id)).execute()
+        
+        if expense_response.data:
+            expense = expense_response.data[0]
+            receipt_source = expense.get("receipts", {}).get("source")
+            if receipt_source != "manual_entry":
+                raise HTTPException(status_code=403, detail="Items can only be deleted from manually created expenses")
         
         # Delete item
         response = supabase.table("expense_items").delete().eq("id", str(item_id)).execute()
@@ -611,15 +811,22 @@ async def list_expense_items(
         for item in items_response.data:
             category_name = item.get("categories", {}).get("name") if item.get("categories") else None
             
+            # Calculate KDV breakdown
+            kdv_rate = item.get("kdv_rate", 20.0)
+            kdv_breakdown = KDVCalculator.get_kdv_breakdown(item["amount"], kdv_rate)
+            
             expense_items.append(ExpenseItemResponse(
                 id=item["id"],
                 expense_id=item["expense_id"],
                 category_id=item["category_id"],
                 category_name=category_name,
-                description=item["description"],
+                item_name=item["description"],
                 amount=item["amount"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                kdv_rate=kdv_rate,
+                kdv_amount=kdv_breakdown["kdv_amount"],
+                amount_without_kdv=kdv_breakdown["amount_without_kdv"],
                 notes=item["notes"],
                 created_at=item["created_at"],
                 updated_at=item["updated_at"]

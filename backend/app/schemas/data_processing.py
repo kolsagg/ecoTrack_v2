@@ -4,14 +4,15 @@ Pydantic schemas for data processing services
 
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
 class QRScanRequest(BaseModel):
     """Request schema for QR code scanning"""
     qr_data: str = Field(..., description="Raw QR code data")
     
-    @validator('qr_data')
+    @field_validator('qr_data')
+    @classmethod
     def validate_qr_data(cls, v):
         if not v or not v.strip():
             raise ValueError('QR data cannot be empty')
@@ -20,11 +21,20 @@ class QRScanRequest(BaseModel):
 class ExpenseItemCreateRequest(BaseModel):
     """Request schema for creating expense item"""
     category_id: Optional[str] = Field(None, description="Category ID")
-    description: str = Field(..., min_length=1, max_length=200, description="Item description")
+    item_name: str = Field(..., min_length=1, max_length=200, description="Item name")
     amount: float = Field(..., gt=0, description="Item amount")
     quantity: int = Field(1, gt=0, description="Item quantity")
     unit_price: Optional[float] = Field(None, gt=0, description="Unit price")
+    kdv_rate: float = Field(20.0, description="KDV (VAT) rate for this item (1%, 10%, 20%)")
     notes: Optional[str] = Field(None, max_length=500, description="Item notes")
+    
+    @field_validator('kdv_rate')
+    @classmethod
+    def validate_kdv_rate(cls, v):
+        valid_rates = [1.0, 10.0, 20.0]
+        if v not in valid_rates:
+            raise ValueError(f'KDV rate must be one of: {valid_rates}')
+        return v
 
 class ManualExpenseRequest(BaseModel):
     """Request schema for manual expense entry"""
@@ -32,7 +42,7 @@ class ManualExpenseRequest(BaseModel):
     expense_date: Optional[datetime] = Field(None, description="Expense date")
     notes: Optional[str] = Field(None, max_length=500, description="General notes")
     currency: Optional[str] = Field("TRY", description="Currency code")
-    items: List[ExpenseItemCreateRequest] = Field(..., min_items=1, description="Expense items")
+    items: List[ExpenseItemCreateRequest] = Field(..., min_length=1, description="Expense items")
 
 class CategorySuggestionRequest(BaseModel):
     """Request schema for category suggestions"""
@@ -149,6 +159,7 @@ class QRReceiptResponse(BaseModel):
     currency: str = Field("TRY", description="Currency")
     expenses_count: int = Field(..., description="Number of expenses created")
     processing_confidence: float = Field(..., description="Processing confidence")
+    public_url: Optional[str] = Field(None, description="Public URL for viewing receipt")
 
 class ReceiptListResponse(BaseModel):
     """Response schema for receipt list"""
@@ -182,10 +193,13 @@ class ExpenseItemResponse(BaseModel):
     expense_id: str = Field(..., description="Parent expense ID")
     category_id: Optional[str] = Field(None, description="Category ID")
     category_name: Optional[str] = Field(None, description="Category name")
-    description: str = Field(..., description="Item description")
+    item_name: str = Field(..., description="Item name")
     amount: float = Field(..., description="Item amount")
     quantity: int = Field(..., description="Item quantity")
     unit_price: Optional[float] = Field(None, description="Unit price")
+    kdv_rate: float = Field(..., description="KDV (VAT) rate for this item")
+    kdv_amount: Optional[float] = Field(None, description="Calculated KDV amount")
+    amount_without_kdv: Optional[float] = Field(None, description="Amount without KDV")
     notes: Optional[str] = Field(None, description="Item notes")
     created_at: datetime = Field(..., description="Creation date")
     updated_at: datetime = Field(..., description="Update date")
@@ -193,9 +207,19 @@ class ExpenseItemResponse(BaseModel):
 class ExpenseItemUpdateRequest(BaseModel):
     """Request schema for updating expense item"""
     category_id: Optional[str] = Field(None, description="Category ID")
-    description: Optional[str] = Field(None, min_length=1, max_length=200, description="Item description")
+    item_name: Optional[str] = Field(None, min_length=1, max_length=200, description="Item name")
     amount: Optional[float] = Field(None, gt=0, description="Item amount")
     quantity: Optional[int] = Field(None, gt=0, description="Item quantity")
+    kdv_rate: Optional[float] = Field(None, description="KDV (VAT) rate for this item")
+    
+    @field_validator('kdv_rate')
+    @classmethod
+    def validate_kdv_rate(cls, v):
+        if v is not None:
+            valid_rates = [1.0, 10.0, 20.0]
+            if v not in valid_rates:
+                raise ValueError(f'KDV rate must be one of: {valid_rates}')
+        return v
     unit_price: Optional[float] = Field(None, gt=0, description="Unit price")
     notes: Optional[str] = Field(None, max_length=500, description="Item notes")
 
@@ -208,6 +232,7 @@ class ExpenseResponse(BaseModel):
     total_amount: float = Field(..., description="Total amount of all items")
     expense_date: datetime = Field(..., description="Expense date")
     notes: Optional[str] = Field(None, description="General notes")
+    merchant_name: Optional[str] = Field(None, description="Merchant name")
     items: List[ExpenseItemResponse] = Field(default_factory=list, description="Expense items")
     qr_code: Optional[str] = Field(None, description="Base64 encoded QR code for receipt")
     created_at: datetime = Field(..., description="Creation date")
@@ -229,6 +254,7 @@ class ExpenseUpdateRequest(BaseModel):
     """Request schema for expense update (summary level)"""
     expense_date: Optional[datetime] = Field(None, description="Expense date")
     notes: Optional[str] = Field(None, max_length=500, description="General notes")
+    merchant_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Merchant name")
 
 class CategoryResponse(BaseModel):
     """Response schema for category"""

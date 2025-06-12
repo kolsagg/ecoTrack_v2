@@ -181,11 +181,11 @@ async def delete_category(
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Category not found")
         
-        # Check if category is being used by any expenses
-        expenses_response = supabase.table("expenses").select("id").eq("category_id", str(category_id)).limit(1).execute()
+        # Check if category is being used by any expense items
+        expense_items_response = supabase.table("expense_items").select("id").eq("category_id", str(category_id)).limit(1).execute()
         
-        if expenses_response.data:
-            raise HTTPException(status_code=400, detail="Cannot delete category that is being used by expenses")
+        if expense_items_response.data:
+            raise HTTPException(status_code=400, detail="Cannot delete category that is being used by expense items")
         
         # Delete category
         response = supabase.table("categories").delete().eq("id", str(category_id)).eq("user_id", current_user["id"]).execute()

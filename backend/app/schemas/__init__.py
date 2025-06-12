@@ -17,6 +17,30 @@ from .data_processing import (
     ErrorResponse
 )
 
+from .merchant import (
+    BusinessType,
+    WebhookStatus,
+    MerchantCreate,
+    MerchantUpdate,
+    MerchantResponse,
+    MerchantListResponse,
+    TransactionItem,
+    CustomerInfo,
+    WebhookTransactionData,
+    WebhookLogResponse,
+    WebhookLogListResponse,
+    TestTransactionRequest,
+    WebhookProcessingResult,
+    CustomerMatchResult
+)
+
+from .loyalty import (
+    LoyaltyLevel,
+    LoyaltyStatusResponse,
+    PointsCalculationResult,
+    LoyaltyTransaction
+)
+
 __all__ = [
     'QRScanRequest',
     'ManualExpenseRequest',
@@ -31,5 +55,25 @@ __all__ = [
     'ProcessingStatistics',
     'RecategorizationRequest',
     'RecategorizationResponse',
-    'ErrorResponse'
+    'ErrorResponse',
+    # Merchant schemas
+    'BusinessType',
+    'WebhookStatus',
+    'MerchantCreate',
+    'MerchantUpdate',
+    'MerchantResponse',
+    'MerchantListResponse',
+    'TransactionItem',
+    'CustomerInfo',
+    'WebhookTransactionData',
+    'WebhookLogResponse',
+    'WebhookLogListResponse',
+    'TestTransactionRequest',
+    'WebhookProcessingResult',
+    'CustomerMatchResult',
+    # Loyalty schemas
+    'LoyaltyLevel',
+    'LoyaltyStatusResponse',
+    'PointsCalculationResult',
+    'LoyaltyTransaction'
 ] 

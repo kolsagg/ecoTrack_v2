@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # EcoTrack Backend API
+  ecotrack-api:
+    build: .
+    container_name: ecotrack-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - FORCE_HTTPS=true
+      - RATE_LIMIT_CALLS=100
+      - RATE_LIMIT_PERIOD=60
+      - LOG_LEVEL=INFO
+      - LOG_FILE=/app/logs/app.log
+      - SCHEDULER_ENABLED=true
+      # Supabase settings (from .env)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # JWT settings
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      # Ollama settings
+      - OLLAMA_ENABLED=${OLLAMA_ENABLED:-true}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
+      # Push notifications
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - ollama
+    networks:
+      - ecotrack-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Ollama AI Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ecotrack-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - ecotrack-network
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: ecotrack-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - ecotrack-api
+    networks:
+      - ecotrack-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: ecotrack-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecotrack-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    profiles:
+      - cache
+
+volumes:
+  ollama_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ecotrack-network:
+    driver: bridge 

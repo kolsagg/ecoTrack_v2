@@ -58,6 +58,19 @@ class DataProcessor:
             try:
                 logger.info("Step 1: Parsing QR code data")
                 parsed_receipt = await self.qr_parser.parse_qr_data(qr_data)
+                
+                # Check if this is an EcoTrack receipt URL
+                if parsed_receipt.get('is_ecotrack_receipt'):
+                    error_msg = "This QR code contains an EcoTrack receipt URL. It should be handled by the scan endpoint directly."
+                    logger.warning(error_msg)
+                    processing_result['errors'].append(error_msg)
+                    processing_result['processing_steps'].append({
+                        'step': 'qr_parsing',
+                        'status': 'failed',
+                        'error': error_msg
+                    })
+                    raise DataProcessingError(error_msg)
+                
                 processing_result['processing_steps'].append({
                     'step': 'qr_parsing',
                     'status': 'success',
@@ -348,6 +361,7 @@ class DataProcessor:
                         'amount': item.get('amount'),
                         'quantity': item.get('quantity', 1),
                         'unit_price': item.get('unit_price'),
+                        'kdv_rate': item.get('kdv_rate'),  # Include KDV rate from request
                         'notes': item.get('notes'),
                         'category_id': item.get('category_id')
                     }

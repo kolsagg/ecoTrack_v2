@@ -5,6 +5,12 @@ from .data_extractor import data_extractor, DataExtractionError
 from .data_cleaner import data_cleaner, DataCleaningError
 from .ai_categorizer import ai_categorizer
 from .data_processor import data_processor, DataProcessingError
+from .merchant_service import MerchantService, CustomerMatchingService
+from .webhook_service import WebhookService
+from .loyalty_service import LoyaltyService
+from .ai_analysis_service import AIAnalysisService
+from .advanced_analysis_service import AdvancedAnalysisService
+from .reporting_service import ReportingService
 
 __all__ = [
     'qr_parser',
@@ -15,5 +21,14 @@ __all__ = [
     'QRParsingError',
     'DataExtractionError',
     'DataCleaningError',
-    'DataProcessingError'
+    'DataProcessingError',
+    # Merchant services
+    'MerchantService',
+    'CustomerMatchingService',
+    'WebhookService',
+    # AI Analysis services
+    'AIAnalysisService',
+    'AdvancedAnalysisService',
+    # Reporting services
+    'ReportingService'
 ] 

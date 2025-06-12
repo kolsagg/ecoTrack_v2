@@ -153,9 +153,8 @@ CREATE POLICY "Users can view own loyalty status"
     ON loyalty_status FOR SELECT
     USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own loyalty status"
-    ON loyalty_status FOR UPDATE
-    USING (auth.uid() = user_id);
+-- Note: No INSERT policy for users - only system (service role) can create loyalty status
+-- Note: No UPDATE policy for users - only system (service role) can update loyalty status
 
 -- AI Suggestions RLS policies
 CREATE POLICY "Users can view own suggestions"
