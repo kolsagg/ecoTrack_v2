@@ -2,27 +2,60 @@
 
 Bu klasör EcoTrack backend uygulaması için kapsamlı test suite'ini içerir.
 
+## 🔐 Güvenlik ve Kurulum
+
+### ⚠️ ÖNEMLİ GÜVENLİK NOTU
+Test dosyalarında **asla** hardcoded secret key'ler kullanmayın! Tüm secret key'ler environment variable'lar aracılığıyla yönetilir.
+
+### Test Environment Kurulumu
+1. **Test Environment Dosyası Oluşturun**:
+   ```bash
+   # Root dizinde .env.test dosyası oluşturun
+   touch .env.test
+   ```
+
+2. **Environment Variables Ayarlayın**:
+   ```bash
+   # .env.test dosyasına aşağıdaki değişkenleri ekleyin:
+   TEST_SUPABASE_URL=https://your-project.supabase.co
+   TEST_SUPABASE_KEY=your_test_supabase_anon_key
+   TEST_SUPABASE_SERVICE_ROLE_KEY=your_test_supabase_service_role_key
+   TEST_API_BASE_URL=http://localhost:8000
+   ```
+
+3. **Test Config Doğrulaması**:
+   ```python
+   from tests.config import test_config
+   
+   # Config'i doğrula
+   if test_config.validate_config():
+       print("✅ Test konfigürasyonu hazır")
+   else:
+       print("❌ Test konfigürasyonu eksik")
+   ```
+
 ## 📁 Test Klasör Yapısı
 
 ```
 tests/
-├── unit/                    # Unit testler
-│   ├── test_services.py     # Service layer testleri
-│   ├── test_database.py     # Database layer testleri
+├── config.py               # Test konfigürasyonu (environment variables)
+├── unit/                   # Unit testler
+│   ├── test_services.py    # Service layer testleri
+│   ├── test_database.py    # Database layer testleri
 │   └── test_merchant_services.py  # Merchant service testleri
-├── integration/             # Integration testler
+├── integration/            # Integration testler
 │   ├── test_expenses_integration.py    # Expenses API testleri
 │   ├── test_receipts_integration.py    # Receipts API testleri
 │   ├── test_auth_integration.py        # Auth API testleri
 │   ├── test_ai_integration.py          # AI API testleri
 │   ├── test_merchant_integration.py    # Merchant API testleri
-│   └── test_*.py           # Diğer endpoint testleri
-├── e2e/                    # End-to-End testler
+│   └── test_*.py          # Diğer endpoint testleri
+├── e2e/                   # End-to-End testler
 │   └── test_complete_workflow.py  # Tam iş akışı testleri
-├── utils/                  # Test utilities
-│   └── test_helpers.py     # Test yardımcı fonksiyonları
-├── fixtures/               # Test fixtures ve mock data
-└── run_all_tests.py       # Ana test runner
+├── utils/                 # Test utilities
+│   └── test_helpers.py    # Test yardımcı fonksiyonları
+├── fixtures/              # Test fixtures ve mock data
+└── run_all_tests.py      # Ana test runner
 ```
 
 ## 🚀 Test Çalıştırma
@@ -114,17 +147,32 @@ Test sonuçları otomatik olarak raporlanır:
 ## 🔧 Test Konfigürasyonu
 
 ### Environment Variables
+Test ortamı için ayrı environment variable'lar kullanılır:
+
 ```bash
-# .env dosyasında
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# .env.test dosyasında (GÜVENLİ)
+TEST_SUPABASE_URL=your_supabase_url
+TEST_SUPABASE_KEY=your_anon_key
+TEST_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+TEST_API_BASE_URL=http://localhost:8000
+```
+
+### ❌ YAPMAYIN - Hardcoded Keys
+```python
+# ❌ YANLIŞ - Hardcoded secret key
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# ✅ DOĞRU - Environment variable
+SUPABASE_KEY = os.getenv("TEST_SUPABASE_KEY", "")
 ```
 
 ### Authentication
-Testler service role key kullanarak admin yetkisi ile çalışır:
+Testler güvenli şekilde environment variable'lardan token alır:
 ```python
-# Service role token otomatik olarak kullanılır
+from tests.config import test_config
+
+# Güvenli token alma
+token = test_config.get_service_role_token()
 client = AuthHelper.get_admin_client()
 ```
 

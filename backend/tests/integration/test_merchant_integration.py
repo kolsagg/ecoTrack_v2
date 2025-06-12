@@ -6,20 +6,22 @@ Bu script merchant integration'ın çalışıp çalışmadığını test eder.
 
 import requests
 import json
+import os
+import sys
 from datetime import datetime
 from supabase import create_client, Client
 
-# Supabase bağlantı bilgileri
-SUPABASE_URL = "https://nkzxynqfwfnlviuvvxet.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5renh5bnFmd2ZubHZpdXZ2eGV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3Njg1MTgsImV4cCI6MjA2MzM0NDUxOH0.IL385jFaggH827mEZPNNJzMfMFa7RKmHWx28BbDs4Js"
-SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5renh5bnFmd2ZubHZpdXZ2eGV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzc2ODUxOCwiZXhwIjoyMDYzMzQ0NTE4fQ.SbrLRJXfzzT9SeBySnp7UCnD_pFREztv8hUVIN4crpM"
+# Test config'i import et
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tests.config import test_config
 
 def get_admin_token():
     """Admin client ile service role token alır"""
     try:
-        # Service role key'i direkt kullan (admin işlemleri için)
+        # Test config'ten service role key'i al
+        token = test_config.get_service_role_token()
         print("✅ Admin client (service role) kullanılıyor")
-        return SUPABASE_SERVICE_ROLE_KEY
+        return token
             
     except Exception as e:
         print(f"❌ Admin token hatası: {str(e)}")
@@ -27,7 +29,12 @@ def get_admin_token():
 
 def test_merchant_endpoints():
     """Merchant endpoint'lerini test eder"""
-    base_url = "http://localhost:8000"
+    # Test config'i doğrula
+    if not test_config.validate_config():
+        print("❌ Test konfigürasyonu eksik, test durduruluyor")
+        return
+    
+    base_url = test_config.API_BASE_URL
     
     # Admin token al (service role)
     admin_token = get_admin_token()

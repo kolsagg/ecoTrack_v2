@@ -8,12 +8,18 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from uuid import UUID
+import os
+import sys
+
+# Test config'i import et
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tests.config import test_config
 
 class TestClient:
     """Test için HTTP client wrapper"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None):
+        self.base_url = base_url or test_config.API_BASE_URL
         self.session = requests.Session()
     
     def set_auth_token(self, token: str):
@@ -56,7 +62,7 @@ class AuthHelper:
     @staticmethod
     def get_service_role_token() -> str:
         """Service role token al"""
-        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5renh5bnFmd2ZubHZpdXZ2eGV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzc2ODUxOCwiZXhwIjoyMDYzMzQ0NTE4fQ.SbrLRJXfzzT9SeBySnp7UCnD_pFREztv8hUVIN4crpM"
+        return test_config.get_service_role_token()
     
     @staticmethod
     def get_admin_client() -> TestClient:
