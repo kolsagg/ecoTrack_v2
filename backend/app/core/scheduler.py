@@ -8,10 +8,7 @@ try:
 except ImportError:
     LoyaltyService = None
 
-try:
-    from app.services.ai_service import AIService
-except ImportError:
-    AIService = None
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,6 @@ class TaskScheduler:
         self.tasks: Dict[str, Dict] = {}
         self.running = False
         self.loyalty_service = LoyaltyService() if LoyaltyService else None
-        self.ai_service = AIService() if AIService else None
     
     def add_task(self, name: str, func: Callable, interval_minutes: int, run_immediately: bool = False):
         """
@@ -100,12 +96,7 @@ class TaskScheduler:
             interval_minutes=7 * 24 * 60  # 7 gün
         )
         
-        # AI önerilerini yenile (günlük)
-        self.add_task(
-            "refresh_ai_suggestions",
-            self._refresh_ai_suggestions,
-            interval_minutes=24 * 60  # 24 saat
-        )
+
         
         # Sistem sağlık kontrolü (saatlik)
         self.add_task(
@@ -156,32 +147,7 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"Error cleaning up webhook logs: {e}")
     
-    async def _refresh_ai_suggestions(self):
-        """
-        Aktif kullanıcılar için AI önerilerini yenile
-        """
-        try:
-            supabase = settings.supabase_admin
-            
-            # Son 7 gün içinde aktif olan kullanıcıları al
-            cutoff_date = datetime.now() - timedelta(days=7)
-            
-            active_users = supabase.table("expenses").select("user_id").gte("created_at", cutoff_date.isoformat()).execute()
-            
-            unique_users = list(set(user["user_id"] for user in active_users.data))
-            
-            for user_id in unique_users:
-                try:
-                    # Kullanıcı için yeni öneriler oluştur
-                    await self.ai_service.generate_savings_suggestions(user_id)
-                    await self.ai_service.generate_budget_suggestions(user_id)
-                except Exception as e:
-                    logger.error(f"Error generating suggestions for user {user_id}: {e}")
-            
-            logger.info(f"AI suggestions refreshed for {len(unique_users)} users")
-        except Exception as e:
-            logger.error(f"Error refreshing AI suggestions: {e}")
-    
+
     async def _system_health_check(self):
         """
         Sistem sağlık kontrolü
@@ -195,12 +161,7 @@ class TaskScheduler:
                 logger.warning("Supabase connection issue detected")
                 return
             
-            # Ollama bağlantısını kontrol et (eğer aktifse)
-            if settings.OLLAMA_ENABLED:
-                try:
-                    await self.ai_service.test_connection()
-                except Exception as e:
-                    logger.warning(f"Ollama connection issue: {e}")
+
             
             logger.info("System health check completed successfully")
         except Exception as e:

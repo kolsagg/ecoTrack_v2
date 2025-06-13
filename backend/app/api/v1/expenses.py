@@ -16,7 +16,7 @@ from app.schemas.data_processing import (
 from app.services.data_processor import DataProcessor
 from app.services.qr_generator import QRGenerator
 from app.services.loyalty_service import LoyaltyService
-from app.db.supabase_client import get_authenticated_supabase_client, get_authenticated_supabase_client
+from app.db.supabase_client import get_authenticated_supabase_client
 from app.utils.kdv_calculator import KDVCalculator
 from supabase import Client
 

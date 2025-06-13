@@ -557,10 +557,7 @@ class TestHealthEndpoints:
                     "response_time_ms": 45.2,
                     "message": "Connection successful"
                 },
-                "ollama": {
-                    "status": "disabled",
-                    "message": "AI service disabled"
-                }
+
             }
         }
         
@@ -590,156 +587,39 @@ class TestHealthEndpoints:
         assert metrics["totals"]["expenses"] >= 0
 
 
-class TestAIAnalysisEndpoints:
-    """Test /api/ai endpoints"""
-    
-    def test_analytics_summary_schema(self):
-        """Test GET /api/ai/analytics/summary"""
-        from app.schemas.ai_analysis import AnalyticsSummaryResponse
-        
-        # Mock analytics summary structure
-        summary_data = {
-            "status": "success",
-            "overview": {
-                "total_expenses_7d": 450.75,
-                "total_expenses_30d": 1850.25,
-                "expense_count_7d": 12,
-                "expense_count_30d": 48,
-                "average_expense_7d": 37.56,
-                "average_expense_30d": 38.55
-            },
-            "categories": [
-                {"name": "Food & Dining", "amount": 650.0, "percentage": 35.1},
-                {"name": "Transportation", "amount": 320.0, "percentage": 17.3}
-            ],
-            "daily_trends": [
-                {"date": "2024-01-15", "amount": 85.50},
-                {"date": "2024-01-16", "amount": 92.25}
-            ],
-            "top_merchants": [
-                {"name": "Market A", "amount": 245.75, "visit_count": 8},
-                {"name": "Restaurant B", "amount": 180.50, "visit_count": 4}
-            ]
-        }
-        
-        assert summary_data["status"] == "success"
-        assert "overview" in summary_data
-        assert "categories" in summary_data
-        assert len(summary_data["categories"]) > 0
-    
-    def test_spending_patterns_analysis(self):
-        """Test POST /api/ai/analysis/spending-patterns"""
-        from app.schemas.ai_analysis import SpendingPatternRequest, AnalysisPeriod
-        
-        # Valid spending pattern request
-        pattern_request = SpendingPatternRequest(
-            analysis_period=AnalysisPeriod.MONTH
-        )
-        
-        assert pattern_request.analysis_period in [
-            AnalysisPeriod.WEEK, AnalysisPeriod.MONTH, AnalysisPeriod.QUARTER
-        ]
-        
-        # Expected response structure
-        pattern_response = {
-            "status": "success",
-            "analysis_period": "30 days",
-            "patterns": [
-                {
-                    "pattern_type": "daily_spending",
-                    "description": "Higher spending on weekends",
-                    "confidence": 0.85
-                }
-            ],
-            "insights": [
-                "You spend 40% more on weekends compared to weekdays"
-            ]
-        }
-        
-        assert pattern_response["status"] == "success"
-        assert "patterns" in pattern_response
-        assert "insights" in pattern_response
-    
-    def test_savings_suggestions(self):
-        """Test GET /api/ai/suggestions/savings"""
-        savings_suggestions = {
-            "status": "success",
-            "suggestions": [
-                {
-                    "category": "Food & Dining",
-                    "current_monthly_avg": 650.0,
-                    "suggested_target": 550.0,
-                    "potential_savings": 100.0,
-                    "tips": ["Cook more meals at home", "Use lunch meal prep"]
-                }
-            ],
-            "total_potential_savings": 180.0,
-            "confidence_score": 0.78
-        }
-        
-        assert savings_suggestions["status"] == "success"
-        assert "suggestions" in savings_suggestions
-        assert savings_suggestions["total_potential_savings"] > 0
-    
-    def test_budget_suggestions(self):
-        """Test GET /api/ai/suggestions/budget"""
-        budget_suggestions = {
-            "status": "success",
-            "suggested_budgets": [
-                {
-                    "category": "Food & Dining",
-                    "suggested_monthly_budget": 600.0,
-                    "based_on_avg": 650.0,
-                    "adjustment_reason": "Slight reduction for savings goal"
-                }
-            ],
-            "total_suggested_budget": 1800.0,
-            "budget_insights": [
-                "Your food spending is consistent but could be optimized"
-            ]
-        }
-        
-        assert budget_suggestions["status"] == "success"
-        assert "suggested_budgets" in budget_suggestions
-        assert budget_suggestions["total_suggested_budget"] > 0
 
 
 class TestReportingEndpoints:
     """Test /api/reports endpoints"""
     
-    def test_spending_distribution_schema(self):
-        """Test POST /api/reports/spending-distribution"""
-        from app.schemas.reporting import SpendingDistributionRequest, ChartType
+    def test_category_distribution_schema(self):
+        """Test GET /api/reports/category-distribution"""
+        from app.schemas.reporting import ChartType, PeriodType
         
-        distribution_request = SpendingDistributionRequest(
-            distribution_type="category",
-            chart_type=ChartType.PIE,
-            limit=10,
-            filters=None
-        )
+        # Test chart type validation
+        valid_chart_types = [ChartType.PIE, ChartType.DONUT]
+        for chart_type in valid_chart_types:
+            assert chart_type in [ChartType.PIE, ChartType.DONUT]
         
-        assert distribution_request.distribution_type in ["category", "merchant"]
-        assert distribution_request.chart_type in [ChartType.PIE, ChartType.BAR, ChartType.DONUT]
-        assert 1 <= distribution_request.limit <= 50
+        # Test year/month validation
+        year = 2024
+        month = 1
+        assert 1 <= month <= 12
+        assert year >= 2020
     
     def test_spending_trends_parameters(self):
         """Test GET /api/reports/spending-trends"""
-        from app.schemas.reporting import AggregationPeriod, ChartType
+        from app.schemas.reporting import PeriodType, ChartType
         
         # Valid parameters
-        aggregation_period = AggregationPeriod.MONTHLY
+        period = PeriodType.SIX_MONTHS
         chart_type = ChartType.LINE
-        include_average = True
-        start_date = date.today() - timedelta(days=90)
-        end_date = date.today()
         
-        assert aggregation_period in [
-            AggregationPeriod.DAILY, AggregationPeriod.WEEKLY, 
-            AggregationPeriod.MONTHLY, AggregationPeriod.QUARTERLY
+        assert period in [
+            PeriodType.THIS_MONTH, PeriodType.THREE_MONTHS, 
+            PeriodType.SIX_MONTHS, PeriodType.ONE_YEAR
         ]
-        assert chart_type in [ChartType.LINE, ChartType.AREA, ChartType.BAR]
-        assert isinstance(include_average, bool)
-        assert start_date < end_date
+        assert chart_type == ChartType.LINE
     
     def test_dashboard_data_structure(self):
         """Test GET /api/reports/dashboard"""
@@ -788,7 +668,6 @@ class TestEndpointSecurity:
             "/api/v1/categories",
             "/api/v1/loyalty/status",
             "/api/v1/devices",
-            "/api/ai/analytics/summary",
             "/api/reports/dashboard"
         ]
         

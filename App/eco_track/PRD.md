@@ -1,9 +1,3 @@
-Okay, I will revise the Frontend PRD to ensure better alignment and compatibility with the Backend PRD we've been working on. The main goal is to make sure the frontend tasks correctly anticipate the data and endpoints provided by the FastAPI backend.
-
-Here's the revised Frontend PRD:
-
----
-
 # Product Requirements Document (PRD) - Frontend (Flutter)
 ## QR-Based Digital Expense Tracking Application - Frontend Development Task List
 
@@ -49,153 +43,181 @@ This section lists all UI development, user interaction, and Backend integration
 *   [ ] **Task:** Create Flutter project structure and add dependencies (e.g., `http` or `dio` for network requests, a state management solution like Provider/Bloc/Riverpod, a charting library like `fl_chart`, `flutter_secure_storage`).
 *   [ ] **Task:** Select and implement a state management solution for the application.
 *   [ ] **Task:** Implement the application theme and style guide (colors, typography, spacing) based on UI/UX designs.
-*   [ ] **Task:** Set up configuration management for different environments (development, production) to handle backend API URLs (e.g., `GET /api/...`).
+*   [ ] **Task:** Set up configuration management for different environments (development, production) to handle backend API URLs.
+*   [ ] **Task:** Implement health check functionality for system monitoring.
+    *   **Backend Interaction:** Calls `GET /health`, `GET /health/detailed`, `GET /health/database`, `GET /health/ai`, and `GET /health/ready`.
 
 ### 4.2. User Authentication and Account Management Interfaces
-*   [ ] **Task:** Develop User Registration (Sign-up) screen (fields: email, password).
-    *   **Backend Interaction:** Calls `POST /api/auth/register`.
+*   [ ] **Task:** Develop User Registration (Sign-up) screen (fields: email, password, first name, last name).
+    *   **Backend Interaction:** Calls `POST /api/v1/auth/register`.
 *   [ ] **Task:** Develop User Login screen (fields: email, password).
-    *   **Backend Interaction:** Calls `POST /api/auth/login`.
+    *   **Backend Interaction:** Calls `POST /api/v1/auth/login`.
 *   [ ] **Task:** Develop Password Reset/Forgot Password flow screens.
-    *   **Backend Interaction:** Calls `POST /api/auth/reset-password` (to request) and potentially a screen for confirming the reset if the backend flow requires it (e.g. `POST /api/auth/reset-password-confirm` if implemented).
-*   [ ] **Task:** Develop Two-Factor Authentication (2FA) setup and entry screens (if 2FA is implemented in the backend).
-*   [ ] **Task:** Develop a settings screen for users to manage their profile (e.g., view email, logout).
-*   [ ] **Task:** Develop a screen for managing notification preferences (if applicable).
+    *   **Backend Interaction:** Calls `POST /api/v1/auth/reset-password` for request and `POST /api/v1/auth/reset-password/confirm` for confirmation.
+*   [ ] **Task:** Develop Multi-Factor Authentication (MFA) setup and verification screens.
+    *   **Backend Interaction:** Calls `GET /api/v1/auth/mfa/status`, `GET /api/v1/auth/mfa/factors`, `POST /api/v1/auth/mfa/totp/create`, `POST /api/v1/auth/mfa/totp/verify`, `POST /api/v1/auth/mfa/totp/challenge`, and `POST /api/v1/auth/mfa/totp/disable`.
+*   [ ] **Task:** Develop account deletion functionality with password verification.
+    *   **Backend Interaction:** Calls `DELETE /api/v1/auth/account`.
 
 ### 4.3. Data Input and Receipt Management Interfaces
 *   [ ] **Task:** Develop QR code scanning interface using a suitable Flutter package (e.g., `mobile_scanner` or `qr_code_scanner`) and manage camera permissions.
-    *   **Backend Interaction:** Sends scanned QR data to `POST /api/receipts/scan`.
-*   [ ] **Task:** Develop an interface to preview scanned QR code data (if feasible to show meaningful raw data) and allow users to confirm or make minor adjustments before submission.
+    *   **Backend Interaction:** Sends scanned QR data to `POST /api/v1/receipts/scan`.
 *   [ ] **Task:** Develop a detailed form interface for manual expense/receipt entry (fields: merchant name, date, items with description, amount, quantity, category, notes).
-    *   **Backend Interaction:** Sends data to `POST /api/expenses` (backend will auto-create receipt).
-*   [ ] **Task:** Develop an interface to display a list of categories (fetched from backend) and allow users to select one for an expense.
-    *   **Backend Interaction:** Fetches categories via `GET /api/categories`.
-*   [ ] **Task:** Develop an interface for users to add/edit/delete their custom categories.
-    *   **Backend Interaction:** `POST /api/categories`, `PUT /api/categories/{category_id}`, `DELETE /api/categories/{category_id}`.
+    *   **Backend Interaction:** Sends data to `POST /api/v1/expenses` (backend will auto-create receipt).
+*   [ ] **Task:** Develop an interface to display receipts and their details.
+    *   **Backend Interaction:** Fetches data via `GET /api/v1/receipts` with filtering/pagination and `GET /api/v1/receipts/{receipt_id}` for details.
+*   [ ] **Task:** Implement receipt sharing and public view functionality.
+    *   **Backend Interaction:** Uses `GET /api/v1/receipts/public/{receipt_id}` and `GET /api/v1/receipts/receipt/{receipt_id}` for web view.
 
-### 4.4. Expense Viewing and Management Interfaces
-*   [ ] **Task:** Develop the main receipts screen displaying a list of all digitized receipts.
-    *   **Backend Interaction:** Fetches data via `GET /api/receipts` (supports pagination, filtering).
-*   [ ] **Task:** Develop a screen displaying a list of individual expenses (parsed from receipts or manually entered).
-    *   **Backend Interaction:** Fetches data via `GET /api/expenses` (supports pagination, filtering).
-*   [ ] **Task:** Develop detail screens for individual receipts and expenses.
-    *   **Backend Interaction:** `GET /api/receipts/{receipt_id}`, `GET /api/expenses/{expense_id}`.
-*   [ ] **Task:** Implement UI elements for searching and filtering receipt and expense lists (by date range, category, merchant name). Frontend will pass these filter parameters to the backend API calls.
-*   [ ] **Task:** Implement UI for editing and deleting expenses.
-    *   **Backend Interaction:** `PUT /api/expenses/{expense_id}`, `DELETE /api/expenses/{expense_id}`.
+### 4.4. Expense Management Interfaces
+*   [ ] **Task:** Develop interfaces for viewing, creating, updating, and deleting expenses and their items.
+    *   **Backend Interaction:** Uses `GET /api/v1/expenses`, `POST /api/v1/expenses`, `GET /api/v1/expenses/{expense_id}`, `PUT /api/v1/expenses/{expense_id}`, `DELETE /api/v1/expenses/{expense_id}`, and also item-specific endpoints like `POST /api/v1/expenses/{expense_id}/items`, `GET /api/v1/expenses/{expense_id}/items`, `PUT /api/v1/expenses/{expense_id}/items/{item_id}`, and `DELETE /api/v1/expenses/{expense_id}/items/{item_id}`.
+*   [ ] **Task:** Implement UI elements for searching and filtering expense lists (by date range, amount range, merchant name).
+*   [ ] **Task:** Develop an interface to manage expense categorization and custom categories.
+    *   **Backend Interaction:** Calls `GET /api/v1/categories`, `POST /api/v1/categories`, `PUT /api/v1/categories/{category_id}`, and `DELETE /api/v1/categories/{category_id}`.
 
 ### 4.5. Financial Analysis and Visualization Interfaces
-*   [ ] **Task:** Develop a main dashboard screen (displaying an overview of spending, recent activity, key insights).
-*   [ ] **Task:** Implement interactive charts (e.g., pie chart, bar chart using `fl_chart`) to display spending distribution by category or merchant.
-    *   **Backend Interaction:** Fetches data via `GET /api/reports/spending-distribution`.
-*   [ ] **Task:** Implement line charts to display spending trends over time (daily, weekly, monthly).
-    *   **Backend Interaction:** Fetches data via `GET /api/reports/spending-trends`.
-*   [ ] **Task:** Implement charts to display spending for selected categories over time.
-    *   **Backend Interaction:** Fetches data via `GET /api/reports/category-spending-over-time`.
-*   [ ] **Task:** Implement charts for budget vs. actual spending comparison (if budgeting feature is implemented).
-    *   **Backend Interaction:** Fetches data via `GET /api/reports/budget-vs-actual`.
-*   [ ] **Task:** Implement UI for inflation analysis graphs (price changes of specific products, if this data is available from backend).
-*   [ ] **Task:** Implement UI controls (date pickers, dropdowns) for filtering data displayed in charts and tables. These filters will be used to make appropriate backend API calls.
-*   [ ] **Task:** Integrate and customize the chosen charting library (e.g., `fl_chart`) to match UI/UX design.
-*   [ ] **Task:** Develop interfaces to display financial data in tabular format where appropriate.
+*   [ ] **Task:** Develop a main dashboard screen with spending overview and insights.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/dashboard`.
+*   [ ] **Task:** Implement interactive charts to display spending distribution by category or merchant.
+    *   **Backend Interaction:** Calls `POST /api/v1/reports/spending-distribution` or `GET /api/v1/reports/spending-distribution` with query parameters.
+*   [ ] **Task:** Implement line/area charts for spending trends over time.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/spending-trends`.
+*   [ ] **Task:** Implement multi-line or stacked charts for comparing categories over time.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/category-spending-over-time`.
+*   [ ] **Task:** Implement budget vs. actual spending comparison charts.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/budget-vs-actual`.
+*   [ ] **Task:** Develop an interface for custom reports with user-defined metrics and dimensions.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/custom`.
+*   [ ] **Task:** Implement report export functionality.
+    *   **Backend Interaction:** Calls `GET /api/v1/reports/export`.
 
 ### 4.6. AI-Powered Feature Interfaces
-*   [ ] **Task:** Develop a screen to display a list of personalized savings suggestions.
-    *   **Backend Interaction:** Fetches data via `GET /api/suggestions/savings`.
-*   [ ] **Task:** Develop an interface to display budget planning suggestions.
-    *   **Backend Interaction:** Fetches data via `GET /api/suggestions/budget`.
-*   [ ] **Task:** Develop an interface for potential campaign/discount suggestions (if backend supports this).
-*   [ ] **Task:** Implement UI elements for users to provide feedback on AI suggestions (e.g., like/dislike, dismiss).
-    *   **Backend Interaction:** (Requires a backend endpoint, e.g., `POST /api/suggestions/{suggestion_id}/feedback`).
-*   [ ] **Task:** Develop a screen to display a list of products nearing their Expiration Date (EOL) (if backend supports this).
-*   [ ] **Task:** Develop UI elements to display consumption plan suggestions for products (if backend supports this).
+*   [ ] **Task:** Develop a screen for comprehensive spending analytics with charts and visualizations.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/analytics/summary`.
+*   [ ] **Task:** Develop an interface to display personalized savings suggestions.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/suggestions/savings`.
+*   [ ] **Task:** Develop an interface for budget planning suggestions.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/suggestions/budget`.
+*   [ ] **Task:** Develop screens to analyze and display spending patterns.
+    *   **Backend Interaction:** Calls `POST /api/v1/api/ai/analysis/spending-patterns` and `GET /api/v1/api/ai/analysis/spending-patterns`.
+*   [ ] **Task:** Develop an interface for recurring expense pattern identification.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/analysis/recurring-expenses`.
+*   [ ] **Task:** Implement product price tracking and change alerting interface.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/analysis/price-changes`.
+*   [ ] **Task:** Develop an interface for product expiration tracking.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/analysis/product-expiration`.
+*   [ ] **Task:** Create a comprehensive advanced analysis dashboard.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/analysis/advanced`.
+*   [ ] **Task:** Integrate AI service health monitoring.
+    *   **Backend Interaction:** Calls `GET /api/v1/api/ai/health`.
 
-### 4.7. Other Feature Interfaces
-*   [ ] **Task:** Develop UI elements to display the user's loyalty program point status and level.
-    *   **Backend Interaction:** Fetches data via `GET /api/loyalty/status`.
-*   [ ] **Task:** Develop a screen to display loyalty program rewards list and details (if applicable).
+### 4.7. Additional Features and Social Components
+*   [ ] **Task:** Develop interfaces for merchant discovery, details, and reviews.
+    *   **Backend Interaction:** Calls `GET /api/v1/merchants/` (with admin authentication), `GET /api/v1/merchants/{merchant_id}` (admin), `GET /api/v1/reviews/merchants/{merchant_id}/reviews`, `GET /api/v1/reviews/merchants/{merchant_id}/rating`.
+*   [ ] **Task:** Implement review creation and management for merchants.
+    *   **Backend Interaction:** Calls `POST /api/v1/reviews/merchants/{merchant_id}/reviews`, `PUT /api/v1/reviews/reviews/{review_id}`, `DELETE /api/v1/reviews/reviews/{review_id}`.
+*   [ ] **Task:** Integrate receipt-based review system, including anonymous reviews.
+    *   **Backend Interaction:** Calls `POST /api/v1/reviews/receipts/{receipt_id}/review` (authenticated) and `POST /api/v1/reviews/receipts/{receipt_id}/review/anonymous` (no authentication).
 
-### 4.8. Frontend - Backend Integration Tasks
+### 4.8. Loyalty Program Integration
+*   [ ] **Task:** Develop UI elements to display the user's loyalty status and progress.
+    *   **Backend Interaction:** Calls `GET /api/v1/loyalty/status`.
+*   [ ] **Task:** Create a points calculator interface.
+    *   **Backend Interaction:** Calls `GET /api/v1/loyalty/calculate-points`.
+*   [ ] **Task:** Implement a loyalty points history screen.
+    *   **Backend Interaction:** Calls `GET /api/v1/loyalty/history`.
+*   [ ] **Task:** Develop an interface showing loyalty levels and requirements.
+    *   **Backend Interaction:** Calls `GET /api/v1/loyalty/levels`.
+
+### 4.9. Device Management
+*   [ ] **Task:** Implement device registration for push notifications.
+    *   **Backend Interaction:** Calls `POST /api/v1/devices/register`.
+*   [ ] **Task:** Create an interface to view and manage registered devices.
+    *   **Backend Interaction:** Calls `GET /api/v1/devices/`, `PUT /api/v1/devices/{device_id}/deactivate`, and `DELETE /api/v1/devices/{device_id}`.
+
+### 4.10. Frontend - Backend Integration Tasks
 *   [ ] **Task:** Create HTTP client services (using Repository or Service pattern with `http` or `dio`) to communicate with all defined Backend API endpoints.
-*   [ ] **Task:** Implement serialization/deserialization logic (e.g., using `json_serializable`) to convert JSON data from APIs into Dart data models (PODOs - Plain Old Dart Objects).
-*   [ ] **Task:** Implement logic to prepare and send user inputs (form data, filter parameters) in the correct format for Backend API calls.
-*   [ ] **Task:** Integrate authentication API calls (`POST /api/auth/login`, `POST /api/auth/register`). Securely store the JWT token (e.g., using `flutter_secure_storage`) and include it in the headers of subsequent authenticated API requests.
-*   [ ] **Task:** Implement all data fetching (GET) and data submission/modification (POST, PUT, DELETE) API calls for expenses, receipts, suggestions, categories, reporting data, etc., mapping to the defined backend endpoints.
-*   [ ] **Task:** Develop a mechanism to display meaningful feedback to the user based on HTTP status codes and error responses from the API (e.g., error messages, success notifications, snackbars).
-*   [ ] **Task:** Implement UI logic to display loading indicators (spinners), error states (e.g., "Failed to load data"), and empty states (e.g., "No expenses found") appropriately.
+*   [ ] **Task:** Implement serialization/deserialization logic (e.g., using `json_serializable`) to convert JSON data from APIs into Dart data models.
+*   [ ] **Task:** Implement token-based authentication flow, securely storing JWT tokens and refreshing them when needed.
+*   [ ] **Task:** Develop error handling and loading state management for all API calls.
+*   [ ] **Task:** Implement proper pagination, filtering, and sorting implementations for list endpoints.
+*   [ ] **Task:** Create models and services for all major data types (receipts, expenses, categories, merchants, etc.).
 
-### 4.9. Testing and Optimization Tasks (Frontend)
-*   [ ] **Task:** Write unit tests for critical business logic in Flutter (e.g., data models, state management logic, utility functions, formatting).
-*   [ ] **Task:** Write widget tests for UI components and screens to verify visual correctness and basic interactions.
-*   [ ] **Task:** Plan and (optionally) automate End-to-End (E2E) test scenarios (e.g., using `flutter_driver` or `patrol`).
-*   [ ] **Task:** Perform performance optimizations (list scrolling performance, animation smoothness, minimize widget rebuilds, memory usage).
-*   [ ] **Task:** Test application responsiveness and appearance on different screen sizes and target devices (Android 9+, iOS 13+).
+### 4.11. Testing and Optimization Tasks
+*   [ ] **Task:** Write unit tests for critical business logic, data models, and API services.
+*   [ ] **Task:** Write widget tests for UI components and screens.
+*   [ ] **Task:** Implement integration tests for critical user flows.
+*   [ ] **Task:** Perform performance optimization (list rendering, image caching, minimizing rebuilds).
+*   [ ] **Task:** Test application on different device sizes and OS versions.
 
 ---
 
 ## 5. Non-Functional Requirements (Frontend Perspective)
 
-*   **Performance:** Fast app launch, smooth screen transitions, acceptable data loading times.
-*   **Usability:** Intuitive, simple, and easy-to-use interface. Clear navigation.
-*   **Security:** Secure handling of sensitive user inputs. Secure storage of JWT. Enforce HTTPS for all API calls.
-*   **Compatibility:** Smooth operation on specified Android and iOS versions.
-*   **Accessibility:** Consider basic accessibility principles (font sizes, color contrast) for future enhancements.
+*   **Performance:** Fast app launch, smooth screen transitions, efficient data loading with pagination and caching.
+*   **Usability:** Intuitive, simple, and easy-to-use interface. Clear navigation and visual feedback.
+*   **Security:** Secure handling of authentication tokens, encrypted storage of sensitive data.
+*   **Compatibility:** Support for Android 9+ and iOS 13+, responsive design for different screen sizes.
+*   **Accessibility:** Basic accessibility features for font scaling, sufficient contrast ratios, and screen reader compatibility.
+*   **Offline Support:** Basic functionality when offline with appropriate error messaging and queue for pending operations.
 
 ---
 
 ## 6. Constraints and Dependencies (Frontend Perspective)
 
-*   **Backend API Availability:** Dependency on the completion and stability of Backend APIs as per the defined contract.
+*   **Backend API Availability:** Dependency on the completion and stability of Backend APIs as per the OpenAPI specification.
 *   **QR Code Scanning Library:** Capabilities and limitations of the chosen Flutter QR scanning package.
-*   **Charting Library:** Customization options and performance of the chosen Flutter charting package.
-*   **Device Permissions:** Management of camera and potentially storage permissions.
+*   **Charting Library:** Compatibility and performance of the chosen Flutter charting package for complex visualizations.
+*   **Device Permissions:** Management of camera permissions for QR scanning and notification permissions for alerts.
+*   **Flutter Version:** Target Flutter version for development with consideration of package compatibility.
 
 ---
 
 ## 7. Success Criteria (Frontend Perspective)
 
 *   All UI screens completed according to UI/UX designs.
-*   User flows (registration, login, adding receipts/expenses, viewing reports) work seamlessly.
-*   Full integration with Backend APIs is complete, and data exchange is accurate.
-*   Application is stable and performs well on target devices.
-*   Positive user feedback regarding ease of use and interface design.
+*   Full integration with Backend APIs as defined in the OpenAPI specification.
+*   Application correctly handles all data operations (CRUD) for expenses, receipts, and other entities.
+*   Charts and visualizations accurately display financial data with responsive interaction.
+*   AI insights are clearly presented and valuable to users.
+*   Application meets performance targets for launch time, screen transitions, and data loading.
+*   Positive user testing feedback regarding usability and value.
 
 ---
 
 ## 8. Open Issues and Out-of-Scope Features (Frontend Perspective)
 
 *   **Open:** Specific UI handling for diverse or unparseable QR code formats.
-*   **Out of Scope (Post-MVP):** Multi-language support (localization).
-*   **Out of Scope (Post-MVP):** Light/Dark mode theme switching.
-*   **Out of Scope (Post-MVP):** Offline data access and synchronization capabilities.
+*   **Out of Scope (Post-MVP):** Multi-language support beyond English.
+*   **Out of Scope (Post-MVP):** Full offline functionality with complete data synchronization.
+*   **Out of Scope (Post-MVP):** Advanced biometric authentication beyond what's provided by the OS.
+*   **Out of Scope (Post-MVP):** Integration with third-party financial services beyond the core application.
 
 ---
 
 ## 9. Project Timeline and Phases (Frontend Development Perspective)
 
-(This section provides a high-level timeline for the Frontend development phase. Completed phases/tasks to be marked `[x]`.)
-
-*   [ ] **Phase 1: Foundation & Core UI (e.g., Sprint 1-2)**
-    *   [ ] Task Group 4.1: Core Application Infrastructure
-    *   [ ] Task Group 4.2: Authentication and Account Management Interfaces
-    *   [ ] Initial setup for Task Group 4.8 (HTTP client, basic models)
-*   [ ] **Phase 2: Data Input & Basic Viewing (e.g., Sprint 3-4)**
-    *   [ ] Task Group 4.3: Data Input and Receipt Management Interfaces
-    *   [ ] Basic screens for Task Group 4.4 (Expense Viewing)
-    *   [ ] Integration for core auth and data input APIs (from 4.8)
-*   [ ] **Phase 3: Visualization & AI Features (e.g., Sprint 5-6)**
-    *   [ ] Task Group 4.5: Financial Analysis and Visualization Interfaces
-    *   [ ] Task Group 4.6: AI-Powered Feature Interfaces
-    *   [ ] Task Group 4.7: Other Feature Interfaces
-    *   [ ] Integration for reporting and AI suggestion APIs (from 4.8)
-*   [ ] **Phase 4: Testing & Refinement (e.g., Sprint 7-8)**
-    *   [ ] Task Group 4.9: Testing and Optimization Tasks
-    *   [ ] Comprehensive integration testing with Backend.
-    *   [ ] Bug fixing and performance tuning.
-*   [ ] **Phase 5: Release Preparation (e.g., Sprint 9)**
-    *   [ ] Final testing and QA.
-    *   [ ] Preparation for app store submission.
-    *   [ ] Finalize UI polish and user documentation/help screens.
+*   [ ] **Phase 1: Foundation & Authentication (Sprint 1-2)**
+    *   [ ] Core application infrastructure (4.1)
+    *   [ ] Authentication and account management (4.2)
+    *   [ ] Initial HTTP client architecture (4.10)
+*   [ ] **Phase 2: Data Input & Basic Management (Sprint 3-4)**
+    *   [ ] QR scanning and receipt management (4.3)
+    *   [ ] Expense management and categories (4.4)
+    *   [ ] Device registration and management (4.9)
+*   [ ] **Phase 3: Visualization & Analysis (Sprint 5-6)**
+    *   [ ] Financial analysis and visualization (4.5)
+    *   [ ] Initial AI feature interfaces (4.6)
+    *   [ ] Review and social components (4.7) 
+*   [ ] **Phase 4: Advanced Features & Optimization (Sprint 7-8)**
+    *   [ ] Complete AI-powered features (4.6)
+    *   [ ] Loyalty program integration (4.8)
+    *   [ ] Optimization and performance improvements (4.11)
+*   [ ] **Phase 5: Testing & Refinement (Sprint 9-10)**
+    *   [ ] Comprehensive testing (4.11)
+    *   [ ] Bug fixing and polish
+    *   [ ] User feedback integration and final refinements
 
 ---
 

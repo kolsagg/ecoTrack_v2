@@ -87,7 +87,7 @@ class ColoredFormatter(logging.Formatter):
         'security': {'color': Colors.YELLOW, 'icon': '🔒'},
         'business': {'color': Colors.MAGENTA, 'icon': '💼'},
         'scheduler': {'color': Colors.BRIGHT_MAGENTA, 'icon': '⏰'},
-        'ai_service': {'color': Colors.BLUE, 'icon': '🤖'},
+
         'health': {'color': Colors.BRIGHT_CYAN, 'icon': '💚'},
         'auth': {'color': Colors.YELLOW, 'icon': '🔐'},
         'database': {'color': Colors.BRIGHT_BLUE, 'icon': '🗄️ '},

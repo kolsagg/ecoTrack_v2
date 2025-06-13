@@ -164,26 +164,7 @@ def test_expenses_and_categories():
             response = requests.delete(f"{BASE_URL}/categories/{created_category_id}", headers=HEADERS)
             print_response(response)
 
-def test_ai_analysis():
-    """AI Analiz endpoint'lerini test eder."""
-    if not TOKEN:
-        print("\n❌ Skipping AI Analysis tests: No valid token.")
-        return
-    
-    print_header("AI Analysis and Suggestions Tests")
 
-    endpoints_to_test = [
-        "/ai/analytics/summary",
-        "/ai/suggestions/savings",
-        "/ai/suggestions/budget",
-        "/ai/analysis/recurring-expenses",
-    ]
-    
-    for endpoint in endpoints_to_test:
-        print_request("GET", f"{endpoint}")
-        # Note the prefix difference from the router file
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS)
-        print_response(response)
 
 def test_reporting():
     """Raporlama endpoint'lerini test eder."""
@@ -219,8 +200,7 @@ def main_menu():
         print("1. Run All Tests")
         print("2. Test Authentication (Login)")
         print("3. Test Expenses & Categories (Requires Login)")
-        print("4. Test AI Analysis (Requires Login)")
-        print("5. Test Reporting (Requires Login)")
+        print("4. Test Reporting (Requires Login)")
         print("0. Exit")
         print("-"*40)
         
@@ -229,7 +209,6 @@ def main_menu():
         if choice == '1':
             test_auth()
             test_expenses_and_categories()
-            test_ai_analysis()
             test_reporting()
         elif choice == '2':
             test_auth()
@@ -237,9 +216,6 @@ def main_menu():
             if not TOKEN: test_auth()
             if TOKEN: test_expenses_and_categories()
         elif choice == '4':
-            if not TOKEN: test_auth()
-            if TOKEN: test_ai_analysis()
-        elif choice == '5':
             if not TOKEN: test_auth()
             if TOKEN: test_reporting()
         elif choice == '0':

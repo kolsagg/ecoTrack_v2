@@ -8,7 +8,6 @@ from .data_processor import data_processor, DataProcessingError
 from .merchant_service import MerchantService, CustomerMatchingService
 from .webhook_service import WebhookService
 from .loyalty_service import LoyaltyService
-from .ai_analysis_service import AIAnalysisService
 from .advanced_analysis_service import AdvancedAnalysisService
 from .reporting_service import ReportingService
 
@@ -27,7 +26,7 @@ __all__ = [
     'CustomerMatchingService',
     'WebhookService',
     # AI Analysis services
-    'AIAnalysisService',
+
     'AdvancedAnalysisService',
     # Reporting services
     'ReportingService'

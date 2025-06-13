@@ -1,6 +1,6 @@
 """
 Financial Reporting Service
-Processes AI analysis data and prepares chart-ready data for frontend visualization
+Generates chart-ready data according to specified response formats
 """
 
 import asyncio
@@ -11,11 +11,13 @@ import calendar
 
 from app.db.supabase_client import get_supabase_client
 from app.schemas.reporting import (
-    ReportingFilters, SpendingDistributionItem, TrendDataPoint, 
-    TrendDataset, CategorySpendingDataPoint, BudgetVsActualItem,
-    AggregationPeriod, ChartType, DashboardSummary
+    PieChartResponse, PieChartDataItem,
+    BarChartResponse, BarChartDataset,
+    LineChartResponse, LineChartDataset, LineChartDataPoint,
+    DashboardResponse, DashboardSummary,
+    ChartType, PeriodType
 )
-from app.services.ai_analysis_service import AIAnalysisService
+from app.services.budget_service import BudgetService
 
 
 class ReportingService:
@@ -23,229 +25,208 @@ class ReportingService:
     
     def __init__(self):
         self.supabase = get_supabase_client()
-        self.ai_service = AIAnalysisService()
+        self.budget_service = BudgetService()
         
         # Chart color palettes
         self.category_colors = [
-            "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
-            "#FF9F40", "#FF6384", "#C9CBCF", "#4BC0C0", "#FF6384"
+            "#FF5722", "#2196F3", "#9C27B0", "#4CAF50", "#FF9800",
+            "#607D8B", "#E91E63", "#00BCD4", "#8BC34A", "#FFC107"
         ]
         
-        self.status_colors = {
-            "under": "#4CAF50",  # Green
-            "over": "#F44336",   # Red
-            "on_track": "#FF9800"  # Orange
+        # Turkish month names for labels
+        self.month_names = {
+            1: "Oca", 2: "Şub", 3: "Mar", 4: "Nis", 5: "May", 6: "Haz",
+            7: "Tem", 8: "Ağu", 9: "Eyl", 10: "Eki", 11: "Kas", 12: "Ara"
         }
     
-    async def get_spending_distribution(
-        self,
-        user_id: str,
-        distribution_type: str,
-        filters: Optional[ReportingFilters] = None,
-        chart_type: ChartType = ChartType.PIE,
-        limit: int = 10
+    async def get_monthly_category_distribution(
+        self, 
+        user_id: str, 
+        year: int, 
+        month: int, 
+        chart_type: ChartType = ChartType.PIE
     ) -> Dict[str, Any]:
         """
-        Generate spending distribution data for charts
-        
-        Args:
-            user_id: User ID
-            distribution_type: 'category' or 'merchant'
-            filters: Optional filtering parameters
-            chart_type: Preferred chart type
-            limit: Maximum number of items to return
+        A. Pasta/Donut Grafik - Aylık Kategori Dağılımı
         """
         try:
-            # Build query based on distribution type
-            if distribution_type == "category":
-                query = self.supabase.table("expense_items").select(
-                    "amount, categories(name), expenses(expense_date)"
-                ).eq("user_id", user_id)
-            else:  # merchant
-                query = self.supabase.table("expenses").select(
-                    "total_amount, expense_date, receipts(merchant_name)"
-                ).eq("user_id", user_id)
+            # Calculate date range for the month
+            start_date = date(year, month, 1)
+            if month == 12:
+                end_date = date(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(year, month + 1, 1) - timedelta(days=1)
             
-            # Apply filters
-            if filters:
-                if filters.start_date:
-                    query = query.gte("expense_date" if distribution_type == "merchant" else "expenses.expense_date", 
-                                    filters.start_date.isoformat())
-                if filters.end_date:
-                    query = query.lte("expense_date" if distribution_type == "merchant" else "expenses.expense_date", 
-                                    filters.end_date.isoformat())
-                if filters.min_amount:
-                    amount_field = "total_amount" if distribution_type == "merchant" else "amount"
-                    query = query.gte(amount_field, filters.min_amount)
-                if filters.max_amount:
-                    amount_field = "total_amount" if distribution_type == "merchant" else "amount"
-                    query = query.lte(amount_field, filters.max_amount)
+            # Get expense data for the month through expenses table
+            query = self.supabase.table("expenses").select(
+                "expense_items(amount, category_id, categories(name))"
+            ).eq("user_id", user_id).gte("expense_date", start_date.isoformat()).lte("expense_date", end_date.isoformat())
             
             result = query.execute()
             
             if not result.data:
-                return self._empty_distribution_response(distribution_type, chart_type, filters)
+                return self._empty_pie_chart_response(year, month, chart_type)
             
-            # Process data
-            distribution_data = defaultdict(lambda: {"amount": 0.0, "count": 0})
+            # Process data by category
+            category_totals = defaultdict(float)
             total_amount = 0.0
-            total_transactions = 0
             
-            for item in result.data:
-                if distribution_type == "category":
-                    label = item.get("categories", {}).get("name", "Uncategorized") if item.get("categories") else "Uncategorized"
+            for expense in result.data:
+                expense_items = expense.get("expense_items", [])
+                for item in expense_items:
+                    category_name = "Diğer"
+                    if item.get("categories"):
+                        category_name = item["categories"].get("name", "Diğer")
+                    
                     amount = float(item.get("amount", 0))
-                else:  # merchant
-                    label = item.get("receipts", {}).get("merchant_name", "Unknown Merchant") if item.get("receipts") else "Unknown Merchant"
-                    amount = float(item.get("total_amount", 0))
-                
-                distribution_data[label]["amount"] += amount
-                distribution_data[label]["count"] += 1
-                total_amount += amount
-                total_transactions += 1
+                    category_totals[category_name] += amount
+                    total_amount += amount
             
-            # Convert to list and sort by amount
-            distribution_list = []
-            for i, (label, data) in enumerate(sorted(distribution_data.items(), 
-                                                   key=lambda x: x[1]["amount"], reverse=True)[:limit]):
-                percentage = (data["amount"] / total_amount * 100) if total_amount > 0 else 0
-                distribution_list.append(SpendingDistributionItem(
-                    label=label,
-                    value=data["amount"],
-                    percentage=round(percentage, 2),
-                    color=self.category_colors[i % len(self.category_colors)],
-                    count=data["count"]
+            # Create chart data
+            chart_data = []
+            for i, (category, amount) in enumerate(sorted(category_totals.items(), key=lambda x: x[1], reverse=True)):
+                percentage = (amount / total_amount * 100) if total_amount > 0 else 0
+                chart_data.append(PieChartDataItem(
+                    label=category,
+                    value=round(amount, 2),
+                    percentage=round(percentage, 1),
+                    color=self.category_colors[i % len(self.category_colors)]
                 ))
             
-            # Generate chart configuration
-            chart_config = self._generate_distribution_chart_config(chart_type, distribution_list)
-            
-            return {
-                "status": "success",
-                "distribution_type": distribution_type,
-                "total_amount": round(total_amount, 2),
-                "total_transactions": total_transactions,
-                "distribution_data": distribution_list,
-                "chart_config": chart_config,
-                "filters_applied": filters,
-                "generated_at": datetime.now()
-            }
+            return PieChartResponse(
+                reportTitle=f"{self.month_names[month]} {year} Kategori Dağılımı",
+                totalAmount=round(total_amount, 2),
+                chartType=chart_type.value,
+                data=chart_data
+            ).dict()
             
         except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-                "distribution_type": distribution_type,
-                "distribution_data": [],
-                "generated_at": datetime.now()
-            }
+            return {"error": f"Failed to generate category distribution: {str(e)}"}
     
     async def get_budget_vs_actual(
-        self,
-        user_id: str,
-        period_start: date,
-        period_end: date,
-        category_ids: Optional[List[str]] = None,
-        chart_type: ChartType = ChartType.BAR
+        self, 
+        user_id: str, 
+        year: int, 
+        month: int
     ) -> Dict[str, Any]:
         """
-        Generate budget vs actual spending comparison
-        Note: This uses AI-generated budget suggestions as budget data
+        B. Çubuk Grafik - Bütçe vs. Harcama
         """
         try:
-            # Get AI budget suggestions
-            budget_suggestions = await self.ai_service.get_budget_suggestions(user_id)
+            # Get user's category budgets
+            budget_result = await self.budget_service.get_category_budgets(user_id)
+            if budget_result["status"] != "success":
+                return {"error": "No budget data found"}
             
-            if budget_suggestions["status"] != "success":
-                return {
-                    "status": "error",
-                    "error": "Could not retrieve budget suggestions",
-                    "comparison_data": [],
-                    "generated_at": datetime.now()
-                }
+            category_budgets = {cb["category_id"]: cb for cb in budget_result["category_budgets"]}
             
-            # Get actual spending by category
-            query = self.supabase.table("expense_items").select(
-                "amount, category_id, categories(name)"
-            ).eq("user_id", user_id).gte("created_at", period_start.isoformat()).lte("created_at", period_end.isoformat())
+            # Calculate date range for the month
+            start_date = date(year, month, 1)
+            if month == 12:
+                end_date = date(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(year, month + 1, 1) - timedelta(days=1)
             
-            if category_ids:
-                query = query.in_("category_id", category_ids)
+            # Get actual spending for the month through expenses table
+            query = self.supabase.table("expenses").select(
+                "expense_items(amount, category_id)"
+            ).eq("user_id", user_id).gte("expense_date", start_date.isoformat()).lte("expense_date", end_date.isoformat())
             
             result = query.execute()
             
             # Calculate actual spending by category
             actual_spending = defaultdict(float)
-            for item in result.data:
-                category_name = item.get("categories", {}).get("name", "Uncategorized") if item.get("categories") else "Uncategorized"
-                actual_spending[category_name] += float(item.get("amount", 0))
+            for expense in result.data or []:
+                expense_items = expense.get("expense_items", [])
+                for item in expense_items:
+                    category_id = item.get("category_id")
+                    amount = float(item.get("amount", 0))
+                    if category_id:
+                        actual_spending[category_id] += amount
             
-            # Create budget vs actual comparison
-            comparison_data = []
+            # Prepare chart data
+            labels = []
+            budget_data = []
+            actual_data = []
             
-            for suggestion in budget_suggestions["suggestions"]:
-                category = suggestion["category"]
-                budgeted = suggestion["suggested_amount"]
-                actual = actual_spending.get(category, 0.0)
-                variance = actual - budgeted
-                variance_percentage = (variance / budgeted * 100) if budgeted > 0 else 0
-                
-                # Determine status
-                if variance <= -budgeted * 0.1:  # 10% under budget
-                    status = "under"
-                elif variance >= budgeted * 0.1:  # 10% over budget
-                    status = "over"
-                else:
-                    status = "on_track"
-                
-                comparison_data.append(BudgetVsActualItem(
-                    category=category,
-                    budgeted=budgeted,
-                    actual=actual,
-                    variance=variance,
-                    variance_percentage=round(variance_percentage, 2),
-                    status=status,
-                    color=self.status_colors[status]
-                ))
+            for category_id, budget_info in category_budgets.items():
+                labels.append(budget_info["category_name"])
+                budget_data.append(budget_info["monthly_limit"])
+                actual_data.append(actual_spending.get(category_id, 0.0))
             
-            # Generate summary
-            total_budgeted = sum(item.budgeted for item in comparison_data)
-            total_actual = sum(item.actual for item in comparison_data)
-            total_variance = total_actual - total_budgeted
+            datasets = [
+                BarChartDataset(
+                    label="Bütçe",
+                    color="#4CAF50",
+                    data=budget_data
+                ),
+                BarChartDataset(
+                    label="Gerçekleşen",
+                    color="#F44336",
+                    data=actual_data
+                )
+            ]
             
-            summary = {
-                "total_budgeted": round(total_budgeted, 2),
-                "total_actual": round(total_actual, 2),
-                "total_variance": round(total_variance, 2),
-                "variance_percentage": round((total_variance / total_budgeted * 100) if total_budgeted > 0 else 0, 2),
-                "categories_over_budget": len([item for item in comparison_data if item.status == "over"]),
-                "categories_under_budget": len([item for item in comparison_data if item.status == "under"])
-            }
-            
-            # Generate chart configuration
-            chart_config = self._generate_budget_chart_config(chart_type, comparison_data)
-            
-            return {
-                "status": "success",
-                "period_start": period_start,
-                "period_end": period_end,
-                "comparison_data": comparison_data,
-                "summary": summary,
-                "chart_config": chart_config,
-                "generated_at": datetime.now()
-            }
+            return BarChartResponse(
+                reportTitle=f"{self.month_names[month]} {year} Bütçe vs. Harcama",
+                chartType="bar",
+                labels=labels,
+                datasets=datasets
+            ).dict()
             
         except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-                "comparison_data": [],
-                "generated_at": datetime.now()
-            }
-
+            return {"error": f"Failed to generate budget vs actual: {str(e)}"}
+    
+    async def get_spending_trends(
+        self, 
+        user_id: str, 
+        period: PeriodType
+    ) -> Dict[str, Any]:
+        """
+        C. Çizgi Grafik - Harcama Trendi
+        """
+        try:
+            # Calculate date range based on period
+            end_date = date.today()
+            
+            if period == PeriodType.THIS_MONTH:
+                start_date = end_date.replace(day=1)
+                title = f"{self.month_names[end_date.month]} {end_date.year} Günlük Harcama Trendi"
+            elif period == PeriodType.THREE_MONTHS:
+                start_date = end_date - timedelta(days=90)
+                title = "Son 3 Aylık Harcama Trendi"
+            elif period == PeriodType.SIX_MONTHS:
+                start_date = end_date - timedelta(days=180)
+                title = "Son 6 Aylık Harcama Trendi"
+            elif period == PeriodType.ONE_YEAR:
+                start_date = end_date - timedelta(days=365)
+                title = "Son 1 Yıllık Harcama Trendi"
+            else:
+                start_date = end_date - timedelta(days=180)
+                title = "Son 6 Aylık Harcama Trendi"
+            
+            # Get expense data
+            query = self.supabase.table("expenses").select(
+                "total_amount, expense_date"
+            ).eq("user_id", user_id).gte("expense_date", start_date.isoformat()).lte("expense_date", end_date.isoformat())
+            
+            result = query.execute()
+            
+            if not result.data:
+                return self._empty_line_chart_response(title, period)
+            
+            # Process data based on period type
+            if period == PeriodType.THIS_MONTH:
+                return await self._process_daily_trend(result.data, title, start_date, end_date)
+            else:
+                return await self._process_monthly_trend(result.data, title, start_date, end_date)
+            
+        except Exception as e:
+            return {"error": f"Failed to generate spending trends: {str(e)}"}
+    
     async def get_dashboard_summary(self, user_id: str) -> Dict[str, Any]:
         """
-        Generate dashboard summary with key metrics and quick charts
+        Dashboard özet verileri
         """
         try:
             # Get current and previous month data
@@ -263,16 +244,14 @@ class ReportingService:
                 "total_amount"
             ).eq("user_id", user_id).gte("expense_date", previous_month_start.isoformat()).lte("expense_date", previous_month_end.isoformat())
             
-            category_query = self.supabase.table("expense_items").select(
-                "amount, categories(name)"
-            ).eq("user_id", user_id).gte("created_at", current_month_start.isoformat())
+            category_query = self.supabase.table("expenses").select(
+                "expense_items(amount, categories(name))"
+            ).eq("user_id", user_id).gte("expense_date", current_month_start.isoformat())
             
-            # Execute queries in parallel
-            current_result, previous_result, category_result = await asyncio.gather(
-                current_month_query.execute(),
-                previous_month_query.execute(),
-                category_query.execute()
-            )
+            # Execute queries
+            current_result = current_month_query.execute()
+            previous_result = previous_month_query.execute()
+            category_result = category_query.execute()
             
             # Calculate current month metrics
             current_expenses = current_result.data or []
@@ -289,22 +268,25 @@ class ReportingService:
             
             # Calculate top category
             category_totals = defaultdict(float)
-            for item in category_result.data or []:
-                category_name = item.get("categories", {}).get("name", "Uncategorized") if item.get("categories") else "Uncategorized"
-                category_totals[category_name] += float(item.get("amount", 0))
+            for expense in category_result.data or []:
+                expense_items = expense.get("expense_items", [])
+                for item in expense_items:
+                    category_name = "Diğer"
+                    if item.get("categories"):
+                        category_name = item["categories"].get("name", "Diğer")
+                    category_totals[category_name] += float(item.get("amount", 0))
             
-            top_category = max(category_totals.items(), key=lambda x: x[1]) if category_totals else ("No Data", 0)
+            top_category = max(category_totals.items(), key=lambda x: x[1]) if category_totals else ("Veri Yok", 0)
             
             # Create summary
             summary = DashboardSummary(
-                total_spending_current_month=round(current_total, 2),
-                total_spending_previous_month=round(previous_total, 2),
+                current_month_spending=round(current_total, 2),
+                previous_month_spending=round(previous_total, 2),
                 month_over_month_change=round(mom_change, 2),
                 top_category=top_category[0],
                 top_category_amount=round(top_category[1], 2),
                 transaction_count=current_count,
-                average_transaction=round(current_average, 2),
-                budget_utilization=None  # Would need budget data
+                average_transaction=round(current_average, 2)
             )
             
             # Generate quick charts data
@@ -313,155 +295,145 @@ class ReportingService:
             # Get recent transactions
             recent_transactions = await self._get_recent_transactions(user_id, limit=5)
             
-            # Generate alerts
-            alerts = await self._generate_financial_alerts(user_id, summary)
-            
-            return {
-                "status": "success",
-                "summary": summary,
-                "quick_charts": quick_charts,
-                "recent_transactions": recent_transactions,
-                "alerts": alerts,
-                "generated_at": datetime.now()
-            }
+            return DashboardResponse(
+                summary=summary,
+                quick_charts=quick_charts,
+                recent_transactions=recent_transactions,
+                generated_at=datetime.now()
+            ).dict()
             
         except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-                "generated_at": datetime.now()
-            }
+            return {"error": f"Failed to generate dashboard: {str(e)}"}
     
     # Helper methods
-    def _generate_distribution_chart_config(self, chart_type: ChartType, data: List[SpendingDistributionItem]) -> Dict[str, Any]:
-        """Generate chart configuration for distribution charts"""
-        return {
-            "type": chart_type.value,
-            "responsive": True,
-            "plugins": {
-                "legend": {
-                    "position": "right" if chart_type == ChartType.PIE else "top"
-                },
-                "tooltip": {
-                    "callbacks": {
-                        "label": "function(context) { return context.label + ': $' + context.parsed.toFixed(2) + ' (' + context.dataset.data[context.dataIndex].percentage + '%)'; }"
-                    }
-                }
-            },
-            "scales": {} if chart_type in [ChartType.PIE, ChartType.DONUT] else {
-                "y": {
-                    "beginAtZero": True,
-                    "ticks": {
-                        "callback": "function(value) { return '$' + value.toFixed(2); }"
-                    }
-                }
-            }
-        }
+    async def _process_daily_trend(self, expense_data: List[Dict], title: str, start_date: date, end_date: date) -> Dict[str, Any]:
+        """Process daily trend data for current month"""
+        daily_totals = defaultdict(float)
+        
+        for expense in expense_data:
+            expense_date = datetime.fromisoformat(expense["expense_date"]).date()
+            amount = float(expense["total_amount"])
+            daily_totals[expense_date] += amount
+        
+        # Create data points for each day in the month
+        data_points = []
+        x_axis_labels = {}
+        current_date = start_date
+        x_index = 0
+        
+        while current_date <= end_date:
+            amount = daily_totals.get(current_date, 0.0)
+            data_points.append(LineChartDataPoint(x=x_index, y=round(amount, 2)))
+            x_axis_labels[str(x_index)] = str(current_date.day)
+            current_date += timedelta(days=1)
+            x_index += 1
+        
+        dataset = LineChartDataset(
+            label="Günlük Harcama",
+            color="#03A9F4",
+            data=data_points
+        )
+        
+        return LineChartResponse(
+            reportTitle=title,
+            chartType="line",
+            xAxisLabels=x_axis_labels,
+            datasets=[dataset]
+        ).dict()
+    
+    async def _process_monthly_trend(self, expense_data: List[Dict], title: str, start_date: date, end_date: date) -> Dict[str, Any]:
+        """Process monthly trend data for longer periods"""
+        monthly_totals = defaultdict(float)
+        
+        for expense in expense_data:
+            expense_date = datetime.fromisoformat(expense["expense_date"]).date()
+            month_key = (expense_date.year, expense_date.month)
+            amount = float(expense["total_amount"])
+            monthly_totals[month_key] += amount
+        
+        # Create data points for each month
+        data_points = []
+        x_axis_labels = {}
+        x_index = 0
+        
+        # Generate month range
+        current_date = start_date.replace(day=1)
+        while current_date <= end_date:
+            month_key = (current_date.year, current_date.month)
+            amount = monthly_totals.get(month_key, 0.0)
+            data_points.append(LineChartDataPoint(x=x_index, y=round(amount, 2)))
+            x_axis_labels[str(x_index)] = self.month_names[current_date.month]
+            
+            # Move to next month
+            if current_date.month == 12:
+                current_date = current_date.replace(year=current_date.year + 1, month=1)
+            else:
+                current_date = current_date.replace(month=current_date.month + 1)
+            x_index += 1
+        
+        dataset = LineChartDataset(
+            label="Aylık Harcama",
+            color="#03A9F4",
+            data=data_points
+        )
+        
+        return LineChartResponse(
+            reportTitle=title,
+            chartType="line",
+            xAxisLabels=x_axis_labels,
+            datasets=[dataset]
+        ).dict()
     
     async def _generate_quick_charts(self, user_id: str, start_date: date, end_date: date) -> Dict[str, Any]:
         """Generate quick chart data for dashboard"""
-        # Get spending distribution for current month
-        distribution = await self.get_spending_distribution(
-            user_id, "category", 
-            ReportingFilters(start_date=start_date, end_date=end_date),
-            limit=5
-        )
-        
-        return {
-            "category_distribution": distribution.get("distribution_data", [])
-        }
+        try:
+            # Get category distribution for current month
+            distribution = await self.get_monthly_category_distribution(
+                user_id, start_date.year, start_date.month, ChartType.PIE
+            )
+            
+            return {
+                "category_distribution": distribution.get("data", [])
+            }
+        except Exception:
+            return {"category_distribution": []}
     
     async def _get_recent_transactions(self, user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Get recent transactions for dashboard"""
-        query = self.supabase.table("expenses").select(
-            "total_amount, expense_date, receipts(merchant_name)"
-        ).eq("user_id", user_id).order("expense_date", desc=True).limit(limit)
-        
-        result = query.execute()
-        
-        transactions = []
-        for expense in result.data or []:
-            transactions.append({
-                "amount": float(expense["total_amount"]),
-                "date": expense["expense_date"],
-                "merchant": expense.get("receipts", {}).get("merchant_name", "Unknown") if expense.get("receipts") else "Manual Entry",
-                "formatted_amount": f"${float(expense['total_amount']):.2f}"
-            })
-        
-        return transactions
+        try:
+            query = self.supabase.table("expenses").select(
+                "total_amount, expense_date, receipts(merchant_name)"
+            ).eq("user_id", user_id).order("expense_date", desc=True).limit(limit)
+            
+            result = query.execute()
+            
+            transactions = []
+            for expense in result.data or []:
+                transactions.append({
+                    "amount": float(expense["total_amount"]),
+                    "date": expense["expense_date"],
+                    "merchant": expense.get("receipts", {}).get("merchant_name", "Bilinmeyen") if expense.get("receipts") else "Manuel Giriş",
+                    "formatted_amount": f"₺{float(expense['total_amount']):.2f}"
+                })
+            
+            return transactions
+        except Exception:
+            return []
     
-    async def _generate_financial_alerts(self, user_id: str, summary: DashboardSummary) -> List[Dict[str, Any]]:
-        """Generate financial alerts based on spending patterns"""
-        alerts = []
-        
-        # High spending alert
-        if summary.month_over_month_change > 20:
-            alerts.append({
-                "type": "warning",
-                "title": "Spending Increase",
-                "message": f"Your spending increased by {summary.month_over_month_change:.1f}% this month",
-                "action": "Review your expenses"
-            })
-        
-        # Low spending alert
-        elif summary.month_over_month_change < -20:
-            alerts.append({
-                "type": "success",
-                "title": "Great Savings",
-                "message": f"You reduced spending by {abs(summary.month_over_month_change):.1f}% this month",
-                "action": "Keep up the good work!"
-            })
-        
-        # High transaction frequency
-        if summary.transaction_count > 50:
-            alerts.append({
-                "type": "info",
-                "title": "Frequent Transactions",
-                "message": f"You made {summary.transaction_count} transactions this month",
-                "action": "Consider consolidating purchases"
-            })
-        
-        return alerts
+    def _empty_pie_chart_response(self, year: int, month: int, chart_type: ChartType) -> Dict[str, Any]:
+        """Return empty pie chart response"""
+        return PieChartResponse(
+            reportTitle=f"{self.month_names[month]} {year} Kategori Dağılımı",
+            totalAmount=0.0,
+            chartType=chart_type.value,
+            data=[]
+        ).dict()
     
-    def _generate_budget_chart_config(self, chart_type: ChartType, data: List[BudgetVsActualItem]) -> Dict[str, Any]:
-        """Generate chart configuration for budget comparison charts"""
-        return {
-            "type": chart_type.value,
-            "responsive": True,
-            "plugins": {
-                "legend": {
-                    "position": "top"
-                }
-            },
-            "scales": {
-                "x": {
-                    "title": {
-                        "display": True,
-                        "text": "Categories"
-                    }
-                },
-                "y": {
-                    "beginAtZero": True,
-                    "title": {
-                        "display": True,
-                        "text": "Amount ($)"
-                    },
-                    "ticks": {
-                        "callback": "function(value) { return '$' + value.toFixed(2); }"
-                    }
-                }
-            }
-        }
-    
-    def _empty_distribution_response(self, distribution_type: str, chart_type: ChartType, filters: Optional[ReportingFilters]) -> Dict[str, Any]:
-        """Return empty distribution response"""
-        return {
-            "status": "success",
-            "distribution_type": distribution_type,
-            "total_amount": 0.0,
-            "total_transactions": 0,
-            "distribution_data": [],
-            "chart_config": self._generate_distribution_chart_config(chart_type, []),
-            "filters_applied": filters,
-            "generated_at": datetime.now()
-        } 
+    def _empty_line_chart_response(self, title: str, period: PeriodType) -> Dict[str, Any]:
+        """Return empty line chart response"""
+        return LineChartResponse(
+            reportTitle=title,
+            chartType="line",
+            xAxisLabels={},
+            datasets=[]
+        ).dict() 

@@ -35,8 +35,17 @@ async def lifespan(app: FastAPI):
     print(f"📊 Environment: {settings.ENVIRONMENT.upper()}")
     print(f"🌐 Debug Mode: {'ON' if settings.DEBUG else 'OFF'}")
     print(f"🔒 HTTPS Enforced: {'YES' if settings.FORCE_HTTPS else 'NO'}")
-    print(f"🤖 AI Service: {'ENABLED' if settings.OLLAMA_ENABLED else 'DISABLED'}")
+
     print(f"⏰ Scheduler: {'ENABLED' if settings.SCHEDULER_ENABLED else 'DISABLED'}")
+    
+    # AI Categorizer durumunu kontrol et
+    try:
+        from app.services.ai_categorizer import ai_categorizer
+        ai_status = "ENABLED" if ai_categorizer._model_available else "RULE-BASED ONLY"
+    except:
+        ai_status = "DISABLED"
+    print(f"🤖 AI Categorizer: {ai_status}")
+    
     print("="*60 + "\n")
     
     logger.info("🚀 Starting EcoTrack API...")

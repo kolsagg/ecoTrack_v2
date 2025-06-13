@@ -173,6 +173,9 @@ async def delete_category(
 ):
     """
     Delete a user's custom category
+    
+    **Note:** If the category is being used by expense items, 
+    those items will be automatically reassigned to the "Other" category.
     """
     try:
         # Check if category exists and belongs to user
@@ -181,11 +184,25 @@ async def delete_category(
         if not existing_response.data:
             raise HTTPException(status_code=404, detail="Category not found")
         
-        # Check if category is being used by any expense items
-        expense_items_response = supabase.table("expense_items").select("id").eq("category_id", str(category_id)).limit(1).execute()
+        # If category is being used by expense items, reassign them to "Other" category
+        expense_items_response = supabase.table("expense_items").select("id").eq("category_id", str(category_id)).execute()
         
+        reassigned_count = 0
         if expense_items_response.data:
-            raise HTTPException(status_code=400, detail="Cannot delete category that is being used by expense items")
+            # Find the "Other" system category
+            other_category_response = supabase.table("categories").select("id").eq("name", "Other").eq("is_system", True).execute()
+            
+            if not other_category_response.data:
+                raise HTTPException(status_code=500, detail="Other category not found in system")
+            
+            other_category_id = other_category_response.data[0]["id"]
+            
+            # Update all expense items to use "Other" category
+            update_response = supabase.table("expense_items").update({
+                "category_id": other_category_id
+            }).eq("category_id", str(category_id)).execute()
+            
+            reassigned_count = len(expense_items_response.data)
         
         # Delete category
         response = supabase.table("categories").delete().eq("id", str(category_id)).eq("user_id", current_user["id"]).execute()
@@ -193,7 +210,12 @@ async def delete_category(
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to delete category")
         
-        return {"message": "Category deleted successfully"}
+        if reassigned_count > 0:
+            return {
+                "message": f"Category deleted successfully. {reassigned_count} expense items reassigned to 'Other' category."
+            }
+        else:
+            return {"message": "Category deleted successfully"}
         
     except HTTPException:
         raise

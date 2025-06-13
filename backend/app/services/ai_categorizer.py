@@ -87,10 +87,36 @@ class AICategorizer:
         """Check if qwen2.5:3b model is available"""
         if not OLLAMA_AVAILABLE or not self.client:
             self._model_available = False
-            logger.warning("Ollama not available - AI categorization disabled")
+            logger.info("Ollama not available - AI categorization disabled, using rule-based only")
             return
             
         try:
+            # Test connection with timeout
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)  # 2 second timeout
+            
+            # Parse host and port from OLLAMA_HOST
+            from app.core.config import settings
+            host_url = settings.OLLAMA_HOST
+            if "://" in host_url:
+                host_url = host_url.split("://")[1]
+            if ":" in host_url:
+                host, port = host_url.split(":")
+                port = int(port)
+            else:
+                host = host_url
+                port = 11434
+            
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result != 0:
+                logger.info("Ollama server not reachable - AI categorization disabled, using rule-based only")
+                self._model_available = False
+                return
+            
+            # If connection successful, check models
             models_response = self.client.list()
             # Handle new Ollama API response format
             if hasattr(models_response, 'models'):
@@ -106,19 +132,13 @@ class AICategorizer:
             self._model_available = self.model_name in available_models
             
             if not self._model_available:
-                logger.warning(f"Model {self.model_name} not found. Available models: {available_models}")
-                logger.info("Attempting to pull qwen2.5:3b model...")
-                try:
-                    self.client.pull(self.model_name)
-                    self._model_available = True
-                    logger.info("Successfully pulled qwen2.5:3b model")
-                except Exception as e:
-                    logger.error(f"Failed to pull model: {str(e)}")
+                logger.info(f"Model {self.model_name} not found. Available models: {available_models}")
+                logger.info("AI categorization will use rule-based fallback")
             else:
-                logger.info(f"Model {self.model_name} is available")
+                logger.info(f"Model {self.model_name} is available - AI categorization enabled")
                 
         except Exception as e:
-            logger.error(f"Failed to check model availability: {str(e)}")
+            logger.info(f"Ollama connection failed: {str(e)} - AI categorization disabled, using rule-based only")
             self._model_available = False
 
     async def categorize_expense(self, description: str, merchant_name: str = None, amount: float = None) -> Dict[str, Any]:
