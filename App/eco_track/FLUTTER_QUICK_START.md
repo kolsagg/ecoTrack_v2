@@ -1,23 +1,23 @@
-# EcoTrack Flutter Frontend - Quick Start Checklist
+# EcoTrack Flutter Frontend - Quick Start Checklist (Updated)
 
-Bu rehber, EcoTrack backend API'sini Flutter uygulamasında hızlıca kullanmaya başlamanız için hazırlanmıştır.
+This guide is prepared to help you quickly start using the EcoTrack backend API in your Flutter application.
 
-## 📋 API Özeti
+## 📋 API Overview
 
-Backend'de toplam **45+ endpoint** bulunmaktadır:
+The backend contains a total of **50+ endpoints**:
 
-- 🏥 **Health Check** (7 endpoint)
-- 🔐 **Authentication** (8 endpoint)  
-- 🧾 **Receipt Management** (5 endpoint)
-- 💰 **Expense Management** (8 endpoint)
-- 📂 **Category Management** (3 endpoint)
-- 🏪 **Merchant Management** (6 endpoint)
-- ⭐ **Review System** (7 endpoint)
-- 🤖 **AI Analysis** (9 endpoint)
-- 📊 **Financial Reporting** (9 endpoint)
-- 🏆 **Loyalty Program** (4 endpoint)
-- 📱 **Device Management** (4 endpoint)
-- 🔗 **Webhooks** (5 endpoint)
+- 🏥 **Health Check** (6 endpoints)
+- 🔐 **Authentication** (8 endpoints)  
+- 🧾 **Receipt Management** (5 endpoints)
+- 💰 **Expense Management** (9 endpoints)
+- 📂 **Category Management** (4 endpoints)
+- 🏪 **Merchant Management** (6 endpoints)
+- ⭐ **Review System** (7 endpoints)
+- 📊 **Financial Reporting** (8 endpoints)
+- 🏆 **Loyalty Program** (4 endpoints)
+- 📱 **Device Management** (4 endpoints)
+- 🔗 **Webhooks** (5 endpoints)
+- 💰 **Budget Management** (9 endpoints)
 
 ## ✅ Prerequisites
 
@@ -44,39 +44,67 @@ cd ecotrack_app
 dependencies:
   flutter:
     sdk: flutter
-  
-  # HTTP Client
-  http: ^1.1.0
-  dio: ^5.3.2  # Alternative
-  
-  # Data Storage
-  shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.0.0
-  
-  # State Management
-  provider: ^6.1.1
-  # or
-  # bloc: ^8.1.2
-  # flutter_bloc: ^8.1.3
-  
-  # JSON Serialization
+
+  #----------- STATE MANAGEMENT -----------#
+  # Provider'a göre daha modern, test edilebilir ve ölçeklenebilir bir yapı sunar.
+  flutter_riverpod: ^2.4.9 
+
+  #----------- API & NETWORK -----------#
+  # Interceptor gibi gelişmiş özellikleriyle API katmanını çok daha temiz hale getirir.
+  dio: ^5.3.3
+
+  #----------- VERİ İŞLEME VE KOD ÜRETİMİ -----------#
+  # JSON model sınıflarını otomatik oluşturmak için temel annotasyonlar.
   json_annotation: ^4.8.1
   
-  # QR Code Scanner
-  qr_code_scanner: ^1.0.1
+  # Nesnelerin değer bazlı karşılaştırılmasını basitleştirir (state management için kritik).
+  equatable: ^2.0.5
+
+  #----------- VERİTABANI VE GÜVENLİ DEPOLAMA -----------#
+  # JWT token gibi hassas verileri güvenli saklamak için endüstri standardı.
+  flutter_secure_storage: ^9.0.0
+
+  #----------- KULLANICI ARAYÜZÜ (UI) & ÖZEL KOMPONENTLER -----------#
+  # QR kod okuma için yüksek performanslı ve modern bir çözüm.
+  mobile_scanner: ^3.5.2
   
-  # Charts (for Reports)
+  # Özelleştirilebilir ve güçlü grafikler oluşturmak için en popüler kütüphane.
   fl_chart: ^0.64.0
-  
-  # UI Components
+
+  # Ortasında buton olan şık ve animasyonlu bir alt navigasyon çubuğu için.
+  animated_bottom_navigation_bar: ^1.3.3
+
+  # SVG ikonları kullanmak için (isteğe bağlı ama önerilir).
+  flutter_svg: ^2.0.9
+
+  #----------- YARDIMCI PAKETLER -----------#
+  # Dependency Injection için hafif ve hızlı bir Service Locator.
+  get_it: ^7.6.4
+
+  # URL açma gibi temel işlemler için.
+  url_launcher: ^6.2.1
+
+  # Cupertino (iOS) ikonları.
   cupertino_icons: ^1.0.2
-  
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  json_serializable: ^6.7.1
+
+  #----------- KOD ÜRETİMİ VE KALİTE -----------#
+  # json_serializable ve injectable için kod üretimini çalıştırır.
   build_runner: ^2.4.7
+  
+  # Modelleri JSON'dan/JSON'a dönüştüren kodu otomatik yazar.
+  json_serializable: ^6.7.1
+  
+  # GetIt için Dependency Injection kodunu otomatik yazar.
+  injectable_generator: ^2.4.1
+
+  # Yüksek kod kalitesi ve tutarlılık için lint kuralları.
   flutter_lints: ^2.0.0
+  # Veya daha katı kurallar için: very_good_analysis: ^5.1.0
 ```
 
 ### 3. Install Dependencies
@@ -217,11 +245,11 @@ flutter run
 ```
 
 ### 3. Test Scenarios
-- [ ] Login page opens?
-- [ ] Backend connection established?
-- [ ] Login operation works?
-- [ ] Token is saved?
-- [ ] Navigation to home page works?
+- [ ] Does login page open?
+- [ ] Is backend connection established?
+- [ ] Does login operation work?
+- [ ] Is token saved?
+- [ ] Does navigation to home page work?
 
 ## 🔍 Debug Tips
 
@@ -483,4 +511,4 @@ For detailed API endpoints and formats, refer to `FLUTTER_API_REFERENCE.md` file
 - **Provider Package**: https://pub.dev/packages/provider
 - **HTTP Package**: https://pub.dev/packages/http
 
-By following this checklist, you can quickly set up and integrate EcoTrack Flutter frontend with the backend! 
+By following this checklist, you can quickly set up and integrate EcoTrack Flutter frontend with the backend!

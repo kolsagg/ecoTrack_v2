@@ -1,5 +1,5 @@
 name: eco_track
-description: "A new Flutter project."
+description: "EcoTrack - Personal Expense Tracking Application"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -31,68 +31,64 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  
-  # Http istek yönetimi
-  dio: ^5.4.0
-  
-  # Durum yönetimi - Riverpod
-  flutter_riverpod: ^2.4.10
-  riverpod_annotation: ^2.3.0
-  
-  # Freezed - değişmez model sınıfları için
-  freezed: ^2.4.7
-  freezed_annotation: ^2.4.1
-  
-  # Flutter Hooks
-  flutter_hooks: ^0.20.5
-  hooks_riverpod: ^2.4.10
-  
-  # JSON serileştirme
+  #----------- STATE MANAGEMENT -----------#
+  # Provider'a göre daha modern, test edilebilir ve ölçeklenebilir bir yapı sunar.
+  flutter_riverpod: ^2.4.9 
+
+  #----------- API & NETWORK -----------#
+  # Interceptor gibi gelişmiş özellikleriyle API katmanını çok daha temiz hale getirir.
+  dio: ^5.3.3
+
+  #----------- VERİ İŞLEME VE KOD ÜRETİMİ -----------#
+  # JSON model sınıflarını otomatik oluşturmak için temel annotasyonlar.
   json_annotation: ^4.8.1
   
-  # Grafik
-  fl_chart: ^0.66.0
-  
-  # Güvenli depolama
+  # Nesnelerin değer bazlı karşılaştırılmasını basitleştirir (state management için kritik).
+  equatable: ^2.0.5
+
+  #----------- VERİTABANI VE GÜVENLİ DEPOLAMA -----------#
+  # JWT token gibi hassas verileri güvenli saklamak için endüstri standardı.
   flutter_secure_storage: ^9.0.0
+
+  #----------- KULLANICI ARAYÜZÜ (UI) & ÖZEL KOMPONENTLER -----------#
+  # QR kod okuma için yüksek performanslı ve modern bir çözüm.
+  mobile_scanner: ^3.5.2
   
-  # Rota yönetimi
-  go_router: ^13.2.0
-  
-  # QR kod tarayıcı
-  mobile_scanner: ^3.5.5
-  
-  # HTTP istekleri için ek paket
-  http: ^1.2.0
-  
-  # Yerel depolama
-  shared_preferences: ^2.2.2
-  
-  # Duyarlı UI ve SVG desteği
-  responsive_framework: ^1.1.1
+  # Özelleştirilebilir ve güçlü grafikler oluşturmak için en popüler kütüphane.
+  fl_chart: ^0.64.0
+
+  # Ortasında buton olan şık ve animasyonlu bir alt navigasyon çubuğu için.
+  animated_bottom_navigation_bar: ^1.3.3
+
+  # SVG ikonları kullanmak için (isteğe bağlı ama önerilir).
   flutter_svg: ^2.0.9
-  
-  # Toast mesajları
-  fluttertoast: ^8.2.4
+
+  #----------- YARDIMCI PAKETLER -----------#
+  # Dependency Injection için hafif ve hızlı bir Service Locator.
+  get_it: ^7.6.4
+
+  # URL açma gibi temel işlemler için.
+  url_launcher: ^6.2.1
+
+  # Cupertino (iOS) ikonları.
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^3.0.0
+  #----------- KOD ÜRETİMİ VE KALİTE -----------#
+  # json_serializable ve injectable için kod üretimini çalıştırır.
+  build_runner: ^2.4.7
   
-  # Code generation
-  build_runner: ^2.4.6
-  riverpod_generator: ^2.3.9
-  json_serializable: ^6.7.0
+  # Modelleri JSON'dan/JSON'a dönüştüren kodu otomatik yazar.
+  json_serializable: ^6.7.1
+  
+  # GetIt için Dependency Injection kodunu otomatik yazar.
+  injectable_generator: ^2.4.1
+
+  # Yüksek kod kalitesi ve tutarlılık için lint kuralları.
+  flutter_lints: ^5.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

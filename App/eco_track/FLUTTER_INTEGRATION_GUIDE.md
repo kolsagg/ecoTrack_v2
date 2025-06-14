@@ -1,23 +1,23 @@
-# EcoTrack Backend - Flutter Frontend Integration Guide
+# EcoTrack Backend - Flutter Frontend Integration Guide (Updated)
 
-Bu rehber, EcoTrack backend API'sini Flutter uygulamasında nasıl entegre edeceğinizi gösterir.
+This guide shows how to integrate the EcoTrack backend API into your Flutter application.
 
-## 📋 Genel Bakış
+## 📋 Overview
 
-EcoTrack backend'i **45+ endpoint** içerir ve aşağıdaki ana kategorilerde gruplandırılmıştır:
+The EcoTrack backend contains **50+ endpoints** and is grouped into the following main categories:
 
-- 🏥 **Health Check** (7 endpoint)
-- 🔐 **Authentication** (8 endpoint)  
-- 🧾 **Receipt Management** (5 endpoint)
-- 💰 **Expense Management** (8 endpoint)
-- 📂 **Category Management** (3 endpoint)
-- 🏪 **Merchant Management** (6 endpoint)
-- ⭐ **Review System** (7 endpoint)
-- 🤖 **AI Analysis** (9 endpoint)
-- 📊 **Financial Reporting** (9 endpoint)
-- 🏆 **Loyalty Program** (4 endpoint)
-- 📱 **Device Management** (4 endpoint)
-- 🔗 **Webhooks** (5 endpoint)
+- 🏥 **Health Check** (6 endpoints)
+- 🔐 **Authentication** (8 endpoints)  
+- 🧾 **Receipt Management** (5 endpoints)
+- 💰 **Expense Management** (9 endpoints)
+- 📂 **Category Management** (4 endpoints)
+- 🏪 **Merchant Management** (6 endpoints)
+- ⭐ **Review System** (7 endpoints)
+- 📊 **Financial Reporting** (8 endpoints)
+- 🏆 **Loyalty Program** (4 endpoints)
+- 📱 **Device Management** (4 endpoints)
+- 🔗 **Webhooks** (5 endpoints)
+- 💰 **Budget Management** (9 endpoints)
 
 ## 📋 Table of Contents
 1. [Backend Setup](#backend-setup)
@@ -285,4 +285,4 @@ class ApiState<T> {
 - **Backend Docs**: `http://localhost:8000/docs`
 - **Flutter Docs**: https://docs.flutter.dev/
 
-This guide contains all the essential information needed to integrate EcoTrack backend with Flutter. For detailed request/response formats, refer to the `FLUTTER_API_REFERENCE.md` file. 
+This guide contains all the essential information needed to integrate EcoTrack backend with Flutter. For detailed request/response formats, refer to the `FLUTTER_API_REFERENCE.md` file.
