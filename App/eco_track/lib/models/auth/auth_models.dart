@@ -10,10 +10,7 @@ class LoginRequest extends Equatable {
   final String email;
   final String password;
 
-  const LoginRequest({
-    required this.email,
-    required this.password,
-  });
+  const LoginRequest({required this.email, required this.password});
 
   factory LoginRequest.fromJson(Map<String, dynamic> json) =>
       _$LoginRequestFromJson(json);
@@ -54,40 +51,11 @@ class RegisterResponse extends Equatable {
   final String? message;
   final User? user;
 
-  const RegisterResponse({
-    this.message,
-    this.user,
-  });
+  const RegisterResponse({this.message, this.user});
 
-  factory RegisterResponse.fromJson(Map<String, dynamic> json) {
-    try {
-      // Backend sadece {} dönüyorsa, default değerler kullan
-      if (json.isEmpty) {
-        return const RegisterResponse(
-          message: 'User registered successfully',
-          user: null,
-        );
-      }
-      
-      // JSON'da user varsa parse et, yoksa null bırak
-      User? user;
-      if (json.containsKey('user') && json['user'] != null) {
-        user = User.fromJson(json['user'] as Map<String, dynamic>);
-      }
-      
-      return RegisterResponse(
-        message: json['message'] as String? ?? 'User registered successfully',
-        user: user,
-      );
-    } catch (e) {
-      // Parse hatası durumunda default değerler döndür
-      return const RegisterResponse(
-        message: 'User registered successfully',
-        user: null,
-      );
-    }
-  }
-  
+  factory RegisterResponse.fromJson(Map<String, dynamic> json) =>
+      _$RegisterResponseFromJson(json);
+
   Map<String, dynamic> toJson() => _$RegisterResponseToJson(this);
 
   @override
@@ -121,12 +89,12 @@ class AuthResponse extends Equatable {
 
   @override
   List<Object?> get props => [
-        accessToken,
-        refreshToken,
-        tokenType,
-        expiresIn,
-        user,
-      ];
+    accessToken,
+    refreshToken,
+    tokenType,
+    expiresIn,
+    user,
+  ];
 }
 
 // Password Reset Request
@@ -167,25 +135,19 @@ class PasswordResetConfirmRequest extends Equatable {
 // MFA Status Response
 @JsonSerializable()
 class MfaStatusResponse extends Equatable {
-  @JsonKey(name: 'mfa_enabled')
-  final bool mfaEnabled;
-  @JsonKey(name: 'totp_enabled')
-  final bool totpEnabled;
+  @JsonKey(name: 'is_enabled')
+  final bool isEnabled;
   @JsonKey(name: 'backup_codes_count')
-  final int backupCodesCount;
+  final int? backupCodesCount;
 
-  const MfaStatusResponse({
-    required this.mfaEnabled,
-    required this.totpEnabled,
-    required this.backupCodesCount,
-  });
+  const MfaStatusResponse({required this.isEnabled, this.backupCodesCount});
 
   factory MfaStatusResponse.fromJson(Map<String, dynamic> json) =>
       _$MfaStatusResponseFromJson(json);
   Map<String, dynamic> toJson() => _$MfaStatusResponseToJson(this);
 
   @override
-  List<Object> get props => [mfaEnabled, totpEnabled, backupCodesCount];
+  List<Object?> get props => [isEnabled, backupCodesCount];
 }
 
 // TOTP Create Response
@@ -242,16 +204,49 @@ class AccountDeleteRequest extends Equatable {
   List<Object> get props => [password];
 }
 
+// Password Change Request
+@JsonSerializable()
+class PasswordChangeRequest extends Equatable {
+  @JsonKey(name: 'current_password')
+  final String currentPassword;
+  @JsonKey(name: 'new_password')
+  final String newPassword;
+
+  const PasswordChangeRequest({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  factory PasswordChangeRequest.fromJson(Map<String, dynamic> json) =>
+      _$PasswordChangeRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$PasswordChangeRequestToJson(this);
+
+  @override
+  List<Object> get props => [currentPassword, newPassword];
+}
+
+// TOTP Disable Request
+@JsonSerializable()
+class TotpDisableRequest extends Equatable {
+  final String password;
+
+  const TotpDisableRequest({required this.password});
+
+  factory TotpDisableRequest.fromJson(Map<String, dynamic> json) =>
+      _$TotpDisableRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$TotpDisableRequestToJson(this);
+
+  @override
+  List<Object> get props => [password];
+}
+
 // Generic Success Response
 @JsonSerializable()
 class SuccessResponse extends Equatable {
   final String message;
   final bool success;
 
-  const SuccessResponse({
-    required this.message,
-    this.success = true,
-  });
+  const SuccessResponse({required this.message, this.success = true});
 
   factory SuccessResponse.fromJson(Map<String, dynamic> json) =>
       _$SuccessResponseFromJson(json);
@@ -259,4 +254,23 @@ class SuccessResponse extends Equatable {
 
   @override
   List<Object> get props => [message, success];
-} 
+}
+
+// Profile Update Request
+@JsonSerializable()
+class ProfileUpdateRequest extends Equatable {
+  @JsonKey(name: 'first_name')
+  final String? firstName;
+  @JsonKey(name: 'last_name')
+  final String? lastName;
+  final String? email;
+
+  const ProfileUpdateRequest({this.firstName, this.lastName, this.email});
+
+  factory ProfileUpdateRequest.fromJson(Map<String, dynamic> json) =>
+      _$ProfileUpdateRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$ProfileUpdateRequestToJson(this);
+
+  @override
+  List<Object?> get props => [firstName, lastName, email];
+}

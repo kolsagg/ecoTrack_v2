@@ -3,7 +3,6 @@ import '../config/api_config.dart';
 import '../core/errors/exceptions.dart';
 import '../models/receipt/receipt_model.dart';
 import '../models/receipt/receipt_requests.dart';
-import '../models/expense/expense_model.dart';
 import '../services/auth_service.dart';
 
 class ReceiptService {
@@ -49,7 +48,7 @@ class ReceiptService {
   }
 
   // Create Expense (Manual Entry) - This creates both receipt and expense
-  Future<Expense> createExpense(CreateExpenseRequest request) async {
+  Future<void> createExpense(CreateExpenseRequest request) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
@@ -66,7 +65,10 @@ class ReceiptService {
         ),
       );
 
-      return Expense.fromJson(response.data);
+      // Debug: Print response to see what backend returns
+      print('DEBUG: API Response: ${response.data}');
+      print('DEBUG: Expense created successfully!');
+
     } on DioException catch (e) {
       if (e.response != null) {
         final error = e.response!.data;
@@ -125,7 +127,42 @@ class ReceiptService {
         ),
       );
 
-      return ReceiptsListResponse.fromJson(response.data);
+
+
+      try {
+        // API direkt olarak receipt listesi döndürüyor, wrapper objesi yok
+        if (response.data is List) {
+          final receiptsList = (response.data as List)
+              .map((item) => Receipt.fromJson(item as Map<String, dynamic>))
+              .toList();
+          
+
+          
+          // Pagination bilgilerini response header'larından al veya varsayılan değerler kullan
+          final totalCount = receiptsList.length; // Gerçek total count header'dan gelmeli
+          final currentPage = page;
+          final itemsPerPage = perPage;
+          final totalPages = (totalCount / itemsPerPage).ceil();
+          
+          final receiptsResponse = ReceiptsListResponse(
+            receipts: receiptsList,
+            total: totalCount,
+            page: currentPage,
+            perPage: itemsPerPage,
+            totalPages: totalPages,
+          );
+          
+          return receiptsResponse;
+        } else {
+          // Eğer API wrapper objesi döndürüyorsa (gelecekte değişebilir)
+          final receiptsResponse = ReceiptsListResponse.fromJson(response.data);
+
+          return receiptsResponse;
+        }
+      } catch (parseError) {
+
+        rethrow;
+      }
     } on DioException catch (e) {
       if (e.response != null) {
         final error = e.response!.data;

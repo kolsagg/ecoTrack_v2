@@ -9,6 +9,14 @@ import '../../services/storage_service.dart';
 import '../../services/expense_service.dart';
 import '../../services/receipt_service.dart';
 import '../../services/health_service.dart';
+import '../../services/reports_service.dart';
+import '../../services/budget_service.dart';
+import '../../services/category_service.dart';
+import '../../services/review_service.dart';
+import '../../services/loyalty_service.dart';
+import '../../services/device_service.dart';
+import '../../services/admin_service.dart';
+import '../../services/merchant_service.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/expense_repository.dart';
 import '../../data/repositories/receipt_repository.dart';
@@ -20,9 +28,7 @@ class DependencyInjection {
     // External dependencies
     getIt.registerLazySingleton<FlutterSecureStorage>(
       () => const FlutterSecureStorage(
-        aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
-        ),
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
         iOptions: IOSOptions(
           accessibility: KeychainAccessibility.first_unlock_this_device,
         ),
@@ -31,21 +37,27 @@ class DependencyInjection {
 
     getIt.registerLazySingleton<Dio>(() {
       final dio = Dio();
-      
+
       // Set base URL
       dio.options.baseUrl = ApiConfig.baseUrl;
-      
+
+      // Follow redirects automatically
+      dio.options.followRedirects = true;
+      dio.options.maxRedirects = 5;
+
       // Add interceptors for logging in debug mode
       if (const bool.fromEnvironment('dart.vm.product') == false) {
-        dio.interceptors.add(LogInterceptor(
-          requestBody: true,
-          responseBody: true,
-          requestHeader: true,
-          responseHeader: false,
-          error: true,
-        ));
+        dio.interceptors.add(
+          LogInterceptor(
+            requestBody: true,
+            responseBody: true,
+            requestHeader: true,
+            responseHeader: false,
+            error: true,
+          ),
+        );
       }
-      
+
       return dio;
     });
 
@@ -54,9 +66,7 @@ class DependencyInjection {
       () => StorageService(getIt<FlutterSecureStorage>()),
     );
 
-    getIt.registerLazySingleton<ApiService>(
-      () => ApiService(getIt<Dio>()),
-    );
+    getIt.registerLazySingleton<ApiService>(() => ApiService(getIt<Dio>()));
 
     // Health service
     getIt.registerLazySingleton<HealthService>(
@@ -72,34 +82,61 @@ class DependencyInjection {
     );
 
     getIt.registerLazySingleton<ExpenseRepository>(
-      () => ExpenseRepository(
-        apiService: getIt<ApiService>(),
-      ),
+      () => ExpenseRepository(apiService: getIt<ApiService>()),
     );
 
     getIt.registerLazySingleton<ReceiptRepository>(
-      () => ReceiptRepository(
-        apiService: getIt<ApiService>(),
-      ),
+      () => ReceiptRepository(apiService: getIt<ApiService>()),
     );
 
     // Business logic services
-    getIt.registerLazySingleton<AuthService>(
-      () => AuthService(),
-    );
+    getIt.registerLazySingleton<AuthService>(() => AuthService());
 
     getIt.registerLazySingleton<ExpenseService>(
-      () => ExpenseService(
-        expenseRepository: getIt<ExpenseRepository>(),
-      ),
+      () =>
+          ExpenseService(authService: getIt<AuthService>(), dio: getIt<Dio>()),
     );
 
     getIt.registerLazySingleton<ReceiptService>(
       () => ReceiptService(getIt<AuthService>(), getIt<Dio>()),
     );
+
+    getIt.registerLazySingleton<ReportsService>(
+      () =>
+          ReportsService(authService: getIt<AuthService>(), dio: getIt<Dio>()),
+    );
+
+    getIt.registerLazySingleton<BudgetService>(
+      () => BudgetService(authService: getIt<AuthService>(), dio: getIt<Dio>()),
+    );
+
+    getIt.registerLazySingleton<CategoryService>(
+      () => CategoryService(getIt<AuthService>(), getIt<Dio>()),
+    );
+
+    getIt.registerLazySingleton<ReviewService>(
+      () => ReviewService(authService: getIt<AuthService>(), dio: getIt<Dio>()),
+    );
+
+    getIt.registerLazySingleton<LoyaltyService>(
+      () =>
+          LoyaltyService(authService: getIt<AuthService>(), dio: getIt<Dio>()),
+    );
+
+    getIt.registerLazySingleton<DeviceService>(
+      () => DeviceService(
+        authService: getIt<AuthService>(),
+        storageService: getIt<StorageService>(),
+        dio: getIt<Dio>(),
+      ),
+    );
+
+    getIt.registerLazySingleton<AdminService>(() => AdminService());
+
+    getIt.registerLazySingleton<MerchantService>(() => MerchantService());
   }
 
   static void reset() {
     getIt.reset();
   }
-} 
+}

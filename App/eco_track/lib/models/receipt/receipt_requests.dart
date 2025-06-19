@@ -26,20 +26,17 @@ class QrScanRequest extends Equatable {
 class CreateExpenseRequest extends Equatable {
   @JsonKey(name: 'merchant_name')
   final String merchantName;
-  @JsonKey(name: 'transaction_date')
-  final DateTime transactionDate;
-  @JsonKey(name: 'total_amount')
-  final double totalAmount;
-  final String currency;
+  @JsonKey(name: 'expense_date')
+  final DateTime? expenseDate;
   final String? notes;
+  final String currency;
   final List<ExpenseItem> items;
 
   const CreateExpenseRequest({
     required this.merchantName,
-    required this.transactionDate,
-    required this.totalAmount,
-    required this.currency,
+    this.expenseDate,
     this.notes,
+    this.currency = 'TRY',
     required this.items,
   });
 
@@ -49,29 +46,35 @@ class CreateExpenseRequest extends Equatable {
   @override
   List<Object?> get props => [
         merchantName,
-        transactionDate,
-        totalAmount,
-        currency,
+        expenseDate,
         notes,
+        currency,
         items,
       ];
 }
 
 @JsonSerializable()
 class ExpenseItem extends Equatable {
-  final String description;
+  @JsonKey(name: 'category_id', includeIfNull: false)
+  final String? categoryId;
+  @JsonKey(name: 'item_name')
+  final String itemName;
   final double amount;
   final int quantity;
-  final String? category;
   @JsonKey(name: 'unit_price')
-  final double unitPrice;
+  final double? unitPrice;
+  @JsonKey(name: 'kdv_rate')
+  final double kdvRate;
+  final String? notes;
 
   const ExpenseItem({
-    required this.description,
+    this.categoryId,
+    required this.itemName,
     required this.amount,
-    required this.quantity,
-    this.category,
-    required this.unitPrice,
+    this.quantity = 1,
+    this.unitPrice,
+    this.kdvRate = 20.0,
+    this.notes,
   });
 
   factory ExpenseItem.fromJson(Map<String, dynamic> json) => _$ExpenseItemFromJson(json);
@@ -79,11 +82,13 @@ class ExpenseItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        description,
+        categoryId,
+        itemName,
         amount,
         quantity,
-        category,
         unitPrice,
+        kdvRate,
+        notes,
       ];
 }
 

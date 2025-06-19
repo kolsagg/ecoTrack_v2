@@ -80,12 +80,15 @@ class ApiConfig {
   static const String devicesEndpoint = '/api/v1/devices';
 
   // Budget endpoints
-  static const String budgetEndpoint = '/api/v1/budget';
+  static const String budgetEndpoint = '/api/v1/budget/';
   static const String budgetCategoriesEndpoint = '/api/v1/budget/categories';
   static const String budgetSummaryEndpoint = '/api/v1/budget/summary';
   static const String budgetApplyAllocationEndpoint =
       '/api/v1/budget/apply-allocation';
   static const String budgetHealthEndpoint = '/api/v1/budget/health';
+
+  // Reviews endpoints
+  static const String reviewsEndpoint = '/api/v1/reviews';
 
   // Environment check
   static bool get isDevelopment => _isDevelopment;

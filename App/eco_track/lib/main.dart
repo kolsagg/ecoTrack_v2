@@ -8,11 +8,11 @@ import 'core/utils/dependency_injection.dart';
 import 'providers/auth_provider.dart';
 import 'routes/app_routes.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'widgets/navigation/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set system UI overlay style globally
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -23,15 +23,11 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   // Initialize dependency injection
   await DependencyInjection.init();
-  
-  runApp(
-    const ProviderScope(
-      child: EcoTrackApp(),
-    ),
-  );
+
+  runApp(const ProviderScope(child: EcoTrackApp()));
 }
 
 class EcoTrackApp extends StatelessWidget {
@@ -68,19 +64,15 @@ class AuthWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    
+
     // Show loading screen while checking authentication
     if (authState.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
-    // Show home screen if authenticated, login screen if not
+
+    // Show main navigation if authenticated, login screen if not
     if (authState.isAuthenticated) {
-      return const HomeScreen();
+      return const MainNavigation();
     } else {
       return const LoginScreen();
     }

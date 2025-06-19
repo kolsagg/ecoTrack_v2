@@ -16,10 +16,11 @@ CreateExpenseRequest _$CreateExpenseRequestFromJson(
   Map<String, dynamic> json,
 ) => CreateExpenseRequest(
   merchantName: json['merchant_name'] as String,
-  transactionDate: DateTime.parse(json['transaction_date'] as String),
-  totalAmount: (json['total_amount'] as num).toDouble(),
-  currency: json['currency'] as String,
+  expenseDate: json['expense_date'] == null
+      ? null
+      : DateTime.parse(json['expense_date'] as String),
   notes: json['notes'] as String?,
+  currency: json['currency'] as String? ?? 'TRY',
   items: (json['items'] as List<dynamic>)
       .map((e) => ExpenseItem.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -29,28 +30,31 @@ Map<String, dynamic> _$CreateExpenseRequestToJson(
   CreateExpenseRequest instance,
 ) => <String, dynamic>{
   'merchant_name': instance.merchantName,
-  'transaction_date': instance.transactionDate.toIso8601String(),
-  'total_amount': instance.totalAmount,
-  'currency': instance.currency,
+  'expense_date': instance.expenseDate?.toIso8601String(),
   'notes': instance.notes,
+  'currency': instance.currency,
   'items': instance.items,
 };
 
 ExpenseItem _$ExpenseItemFromJson(Map<String, dynamic> json) => ExpenseItem(
-  description: json['description'] as String,
+  categoryId: json['category_id'] as String?,
+  itemName: json['item_name'] as String,
   amount: (json['amount'] as num).toDouble(),
-  quantity: (json['quantity'] as num).toInt(),
-  category: json['category'] as String?,
-  unitPrice: (json['unit_price'] as num).toDouble(),
+  quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+  unitPrice: (json['unit_price'] as num?)?.toDouble(),
+  kdvRate: (json['kdv_rate'] as num?)?.toDouble() ?? 20.0,
+  notes: json['notes'] as String?,
 );
 
 Map<String, dynamic> _$ExpenseItemToJson(ExpenseItem instance) =>
     <String, dynamic>{
-      'description': instance.description,
+      if (instance.categoryId case final value?) 'category_id': value,
+      'item_name': instance.itemName,
       'amount': instance.amount,
       'quantity': instance.quantity,
-      'category': instance.category,
       'unit_price': instance.unitPrice,
+      'kdv_rate': instance.kdvRate,
+      'notes': instance.notes,
     };
 
 ReceiptsListResponse _$ReceiptsListResponseFromJson(

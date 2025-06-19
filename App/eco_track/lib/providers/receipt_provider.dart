@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils/dependency_injection.dart';
 import '../models/receipt/receipt_model.dart';
 import '../models/receipt/receipt_requests.dart';
-import '../models/expense/expense_model.dart';
 import '../services/receipt_service.dart';
+import 'expense_provider.dart';
 
 // Receipt Service Provider
 final receiptServiceProvider = Provider<ReceiptService>((ref) {
@@ -50,8 +50,10 @@ class ReceiptState {
 // Receipt Notifier
 class ReceiptNotifier extends StateNotifier<ReceiptState> {
   final ReceiptService _receiptService;
+  final Ref _ref;
 
-  ReceiptNotifier(this._receiptService) : super(const ReceiptState());
+  ReceiptNotifier(this._receiptService, this._ref)
+    : super(const ReceiptState());
 
   // QR Code Scanning
   Future<QrScanResponse> scanQrCode(String qrData) async {
@@ -64,13 +66,15 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
   }
 
   // Create Expense
-  Future<Expense> createExpense(CreateExpenseRequest request) async {
+  Future<void> createExpense(CreateExpenseRequest request) async {
     try {
       state = state.copyWith(isLoading: true, error: null);
-      final expense = await _receiptService.createExpense(request);
+      await _receiptService.createExpense(request);
       // Refresh receipts after creating expense
       await loadReceipts(refresh: true);
-      return expense;
+      // Also refresh recent expenses for home screen
+      _ref.read(recentExpensesStateProvider.notifier).refreshRecentExpenses();
+      state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
@@ -89,7 +93,7 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
 
     try {
       final page = refresh ? 1 : state.currentPage + 1;
-      
+
       if (!refresh && !state.hasMore) return;
 
       state = state.copyWith(isLoading: true, error: null);
@@ -102,8 +106,8 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
         category: category,
       );
 
-      final newReceipts = refresh 
-          ? response.receipts 
+      final newReceipts = refresh
+          ? response.receipts
           : [...state.receipts, ...response.receipts];
 
       state = state.copyWith(
@@ -132,12 +136,12 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
   Future<Receipt> shareReceipt(String receiptId) async {
     try {
       final sharedReceipt = await _receiptService.shareReceipt(receiptId);
-      
+
       // Update the receipt in the list
       final updatedReceipts = state.receipts.map((receipt) {
         return receipt.id == receiptId ? sharedReceipt : receipt;
       }).toList();
-      
+
       state = state.copyWith(receipts: updatedReceipts);
       return sharedReceipt;
     } catch (e) {
@@ -150,12 +154,12 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
   Future<void> deleteReceipt(String receiptId) async {
     try {
       await _receiptService.deleteReceipt(receiptId);
-      
+
       // Remove the receipt from the list
       final updatedReceipts = state.receipts
           .where((receipt) => receipt.id != receiptId)
           .toList();
-      
+
       state = state.copyWith(receipts: updatedReceipts);
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -175,7 +179,9 @@ class ReceiptNotifier extends StateNotifier<ReceiptState> {
 }
 
 // Receipt Provider
-final receiptProvider = StateNotifierProvider<ReceiptNotifier, ReceiptState>((ref) {
+final receiptProvider = StateNotifierProvider<ReceiptNotifier, ReceiptState>((
+  ref,
+) {
   final receiptService = ref.watch(receiptServiceProvider);
-  return ReceiptNotifier(receiptService);
-}); 
+  return ReceiptNotifier(receiptService, ref);
+});

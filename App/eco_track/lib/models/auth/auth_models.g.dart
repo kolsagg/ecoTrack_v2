@@ -82,15 +82,13 @@ Map<String, dynamic> _$PasswordResetConfirmRequestToJson(
 
 MfaStatusResponse _$MfaStatusResponseFromJson(Map<String, dynamic> json) =>
     MfaStatusResponse(
-      mfaEnabled: json['mfa_enabled'] as bool,
-      totpEnabled: json['totp_enabled'] as bool,
-      backupCodesCount: (json['backup_codes_count'] as num).toInt(),
+      isEnabled: json['is_enabled'] as bool,
+      backupCodesCount: (json['backup_codes_count'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$MfaStatusResponseToJson(MfaStatusResponse instance) =>
     <String, dynamic>{
-      'mfa_enabled': instance.mfaEnabled,
-      'totp_enabled': instance.totpEnabled,
+      'is_enabled': instance.isEnabled,
       'backup_codes_count': instance.backupCodesCount,
     };
 
@@ -124,6 +122,26 @@ Map<String, dynamic> _$AccountDeleteRequestToJson(
   AccountDeleteRequest instance,
 ) => <String, dynamic>{'password': instance.password};
 
+PasswordChangeRequest _$PasswordChangeRequestFromJson(
+  Map<String, dynamic> json,
+) => PasswordChangeRequest(
+  currentPassword: json['current_password'] as String,
+  newPassword: json['new_password'] as String,
+);
+
+Map<String, dynamic> _$PasswordChangeRequestToJson(
+  PasswordChangeRequest instance,
+) => <String, dynamic>{
+  'current_password': instance.currentPassword,
+  'new_password': instance.newPassword,
+};
+
+TotpDisableRequest _$TotpDisableRequestFromJson(Map<String, dynamic> json) =>
+    TotpDisableRequest(password: json['password'] as String);
+
+Map<String, dynamic> _$TotpDisableRequestToJson(TotpDisableRequest instance) =>
+    <String, dynamic>{'password': instance.password};
+
 SuccessResponse _$SuccessResponseFromJson(Map<String, dynamic> json) =>
     SuccessResponse(
       message: json['message'] as String,
@@ -132,3 +150,19 @@ SuccessResponse _$SuccessResponseFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$SuccessResponseToJson(SuccessResponse instance) =>
     <String, dynamic>{'message': instance.message, 'success': instance.success};
+
+ProfileUpdateRequest _$ProfileUpdateRequestFromJson(
+  Map<String, dynamic> json,
+) => ProfileUpdateRequest(
+  firstName: json['first_name'] as String?,
+  lastName: json['last_name'] as String?,
+  email: json['email'] as String?,
+);
+
+Map<String, dynamic> _$ProfileUpdateRequestToJson(
+  ProfileUpdateRequest instance,
+) => <String, dynamic>{
+  'first_name': instance.firstName,
+  'last_name': instance.lastName,
+  'email': instance.email,
+};

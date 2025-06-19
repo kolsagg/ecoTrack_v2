@@ -16,11 +16,12 @@ class ReceiptsListScreen extends ConsumerStatefulWidget {
 class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
-  
+
   String? _selectedCategory;
   DateTime? _startDate;
   DateTime? _endDate;
 
+  //TODO: Add categories from database
   final List<String> _categories = [
     'Food & Beverage',
     'Transportation',
@@ -50,30 +51,34 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // Load more data when approaching end of page
-      ref.read(receiptProvider.notifier).loadReceipts(
-        merchantName: _searchController.text.trim().isEmpty 
-            ? null 
-            : _searchController.text.trim(),
-        category: _selectedCategory,
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+      ref
+          .read(receiptProvider.notifier)
+          .loadReceipts(
+            merchantName: _searchController.text.trim().isEmpty
+                ? null
+                : _searchController.text.trim(),
+            category: _selectedCategory,
+            startDate: _startDate,
+            endDate: _endDate,
+          );
     }
   }
 
   void _applyFilters() {
-    ref.read(receiptProvider.notifier).loadReceipts(
-      refresh: true,
-      merchantName: _searchController.text.trim().isEmpty 
-          ? null 
-          : _searchController.text.trim(),
-      category: _selectedCategory,
-      startDate: _startDate,
-      endDate: _endDate,
-    );
+    ref
+        .read(receiptProvider.notifier)
+        .loadReceipts(
+          refresh: true,
+          merchantName: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+          category: _selectedCategory,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
   }
 
   void _clearFilters() {
@@ -120,13 +125,10 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
             children: [
               const Text(
                 'Filters',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              
+
               // Merchant Search
               TextField(
                 controller: _searchController,
@@ -138,7 +140,7 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Category Selection
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
@@ -159,7 +161,7 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               // Date Range
               InkWell(
                 onTap: _selectDateRange,
@@ -181,7 +183,9 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
                             ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} - ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
                             : 'Select date range',
                         style: TextStyle(
-                          color: _startDate != null ? Colors.black : Colors.grey,
+                          color: _startDate != null
+                              ? Colors.black
+                              : Colors.grey,
                         ),
                       ),
                     ],
@@ -189,7 +193,7 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // Buttons
               Row(
                 children: [
@@ -261,15 +265,17 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
           loadingText: 'Loading receipts...',
           child: RefreshIndicator(
             onRefresh: () async {
-              await ref.read(receiptProvider.notifier).loadReceipts(
-                refresh: true,
-                merchantName: _searchController.text.trim().isEmpty 
-                    ? null 
-                    : _searchController.text.trim(),
-                category: _selectedCategory,
-                startDate: _startDate,
-                endDate: _endDate,
-              );
+              await ref
+                  .read(receiptProvider.notifier)
+                  .loadReceipts(
+                    refresh: true,
+                    merchantName: _searchController.text.trim().isEmpty
+                        ? null
+                        : _searchController.text.trim(),
+                    category: _selectedCategory,
+                    startDate: _startDate,
+                    endDate: _endDate,
+                  );
             },
             child: receiptState.receipts.isEmpty && !receiptState.isLoading
                 ? _buildEmptyState()
@@ -285,11 +291,7 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.receipt_long,
-            size: 64,
-            color: Colors.grey,
-          ),
+          Icon(Icons.receipt_long, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
             'No receipts yet',
@@ -303,9 +305,7 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
           Text(
             'Start by scanning QR codes or\nadding expenses manually',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-            ),
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
@@ -335,16 +335,14 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
   }
 
   Widget _buildReceiptCard(Receipt receipt) {
-    final itemCount = receipt.parsedReceiptData?.items?.length ?? 0;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed(
-            '/receipt-detail',
-            arguments: receipt.id,
-          );
+          Navigator.of(
+            context,
+          ).pushNamed('/receipt-detail', arguments: receipt.id);
         },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
@@ -378,22 +376,20 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '${receipt.transactionDate.day}/${receipt.transactionDate.month}/${receipt.transactionDate.year}',
                     style: const TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(width: 16),
-                  const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$itemCount items',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
                 ],
               ),
-              if (receipt.parsedReceiptData?.notes != null && 
+              if (receipt.parsedReceiptData?.notes != null &&
                   receipt.parsedReceiptData!.notes!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -431,28 +427,8 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
                     )
                   else
                     const SizedBox.shrink(),
-                  PopupMenuButton(
+                  PopupMenuButton<String>(
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'view',
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility),
-                            SizedBox(width: 8),
-                            Text('View'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'share',
-                        child: Row(
-                          children: [
-                            Icon(Icons.share),
-                            SizedBox(width: 8),
-                            Text('Share'),
-                          ],
-                        ),
-                      ),
                       const PopupMenuItem(
                         value: 'delete',
                         child: Row(
@@ -477,35 +453,9 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
 
   void _handleMenuAction(String action, Receipt receipt) {
     switch (action) {
-      case 'view':
-        Navigator.of(context).pushNamed(
-          '/receipt-detail',
-          arguments: receipt.id,
-        );
-        break;
-      case 'share':
-        _shareReceipt(receipt);
-        break;
       case 'delete':
         _deleteReceipt(receipt);
         break;
-    }
-  }
-
-  void _shareReceipt(Receipt receipt) async {
-    try {
-      await ref.read(receiptProvider.notifier).shareReceipt(receipt.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Receipt shared successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
     }
   }
 
@@ -514,7 +464,9 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Receipt'),
-        content: Text('Are you sure you want to delete the receipt from ${receipt.merchantName ?? 'Unknown Merchant'}?'),
+        content: Text(
+          'Are you sure you want to delete the receipt from ${receipt.merchantName ?? 'Unknown Merchant'}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -524,17 +476,21 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                await ref.read(receiptProvider.notifier).deleteReceipt(receipt.id);
-                if (mounted) {
+                await ref
+                    .read(receiptProvider.notifier)
+                    .deleteReceipt(receipt.id);
+                if (mounted && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Receipt deleted successfully')),
+                    const SnackBar(
+                      content: Text('Receipt deleted successfully'),
+                    ),
                   );
                 }
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                if (mounted && context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
@@ -548,4 +504,4 @@ class _ReceiptsListScreenState extends ConsumerState<ReceiptsListScreen> {
       ),
     );
   }
-} 
+}

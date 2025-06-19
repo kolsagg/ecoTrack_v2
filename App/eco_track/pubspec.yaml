@@ -52,13 +52,13 @@ dependencies:
 
   #----------- KULLANICI ARAYÜZÜ (UI) & ÖZEL KOMPONENTLER -----------#
   # QR kod okuma için yüksek performanslı ve modern bir çözüm.
-  mobile_scanner: ^3.5.2
+  mobile_scanner: ^3.5.6
   
   # Özelleştirilebilir ve güçlü grafikler oluşturmak için en popüler kütüphane.
-  fl_chart: ^0.64.0
+  fl_chart: ^0.68.0
 
   # Ortasında buton olan şık ve animasyonlu bir alt navigasyon çubuğu için.
-  animated_bottom_navigation_bar: ^1.3.3
+  animated_bottom_navigation_bar: ^1.4.0
 
   # SVG ikonları kullanmak için (isteğe bağlı ama önerilir).
   flutter_svg: ^2.0.9
@@ -70,8 +70,16 @@ dependencies:
   # URL açma gibi temel işlemler için.
   url_launcher: ^6.2.1
 
+  firebase_core: ^2.24.2
+
+  # Tarih ve saat formatlaması için.
+  intl: ^0.19.0
+
   # Cupertino (iOS) ikonları.
   cupertino_icons: ^1.0.8
+  device_info_plus: ^11.4.0
+  package_info_plus: ^8.3.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

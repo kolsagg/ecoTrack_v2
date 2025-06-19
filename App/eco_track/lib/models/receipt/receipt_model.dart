@@ -23,7 +23,7 @@ class Receipt extends Equatable {
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
   @JsonKey(name: 'merchant_id')
   final String? merchantId;
   @JsonKey(name: 'is_public')
@@ -40,7 +40,7 @@ class Receipt extends Equatable {
     required this.source,
     this.parsedReceiptData,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
     this.merchantId,
     this.isPublic = false,
   });

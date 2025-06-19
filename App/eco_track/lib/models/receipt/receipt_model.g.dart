@@ -21,7 +21,9 @@ Receipt _$ReceiptFromJson(Map<String, dynamic> json) => Receipt(
           json['parsed_receipt_data'] as Map<String, dynamic>,
         ),
   createdAt: DateTime.parse(json['created_at'] as String),
-  updatedAt: DateTime.parse(json['updated_at'] as String),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
   merchantId: json['merchant_id'] as String?,
   isPublic: json['is_public'] as bool? ?? false,
 );
@@ -37,7 +39,7 @@ Map<String, dynamic> _$ReceiptToJson(Receipt instance) => <String, dynamic>{
   'source': instance.source,
   'parsed_receipt_data': instance.parsedReceiptData,
   'created_at': instance.createdAt.toIso8601String(),
-  'updated_at': instance.updatedAt.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
   'merchant_id': instance.merchantId,
   'is_public': instance.isPublic,
 };

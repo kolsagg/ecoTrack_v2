@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/receipt/receipt_requests.dart';
+import '../../models/merchant/merchant_models.dart';
 import '../../providers/receipt_provider.dart';
+import '../../providers/category_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
+import '../../widgets/common/merchant_autocomplete_field.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -26,6 +29,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   
   final List<ExpenseItem> _items = [];
   bool _isLoading = false;
+  Merchant? _selectedMerchant;
 
   // Currency list
   final List<String> _currencies = ['TRY', 'USD', 'EUR'];
@@ -109,14 +113,16 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     try {
       final request = CreateExpenseRequest(
         merchantName: _merchantController.text.trim(),
-        transactionDate: _selectedDate,
-        totalAmount: double.parse(_amountController.text),
+        expenseDate: _selectedDate,
         currency: _selectedCurrency,
         notes: _notesController.text.trim().isEmpty 
             ? null 
             : _notesController.text.trim(),
         items: _items,
       );
+      
+      // Debug: Print request JSON to see what's being sent
+      print('DEBUG: Sending expense request: ${request.toJson()}');
 
       await ref.read(receiptProvider.notifier).createExpense(request);
 
@@ -129,7 +135,10 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
@@ -165,16 +174,21 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Merchant Name
-                  CustomTextField(
+                  // Merchant Name with Autocomplete
+                  MerchantAutocompleteField(
                     controller: _merchantController,
                     label: 'Merchant/Store Name',
-                    hintText: 'e.g. Migros, Starbucks',
+                    hintText: 'e.g. Migros, Starbucks - yazarak arayın',
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Merchant name is required';
                       }
                       return null;
+                    },
+                    onMerchantSelected: (merchant) {
+                      setState(() {
+                        _selectedMerchant = merchant;
+                      });
                     },
                   ),
                   const SizedBox(height: 16),
@@ -263,13 +277,15 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _addItem,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Item'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppConstants.primaryColor,
-                          foregroundColor: Colors.white,
+                      Flexible(
+                        child: ElevatedButton.icon(
+                          onPressed: _addItem,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Item'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppConstants.primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -300,9 +316,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         final item = _items[index];
                         return Card(
                           child: ListTile(
-                            title: Text(item.description),
+                            title: Text(item.itemName),
                             subtitle: Text(
-                              '${item.quantity} pcs × ${item.unitPrice.toStringAsFixed(2)} $_selectedCurrency',
+                              '${item.quantity} pcs × ${item.unitPrice?.toStringAsFixed(2) ?? '0.00'} $_selectedCurrency',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -378,7 +394,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 }
 
 // Item Add Dialog
-class _ItemDialog extends StatefulWidget {
+class _ItemDialog extends ConsumerStatefulWidget {
   final ExpenseItem? item;
   final Function(ExpenseItem) onAdd;
 
@@ -388,10 +404,10 @@ class _ItemDialog extends StatefulWidget {
   });
 
   @override
-  State<_ItemDialog> createState() => _ItemDialogState();
+  ConsumerState<_ItemDialog> createState() => _ItemDialogState();
 }
 
-class _ItemDialogState extends State<_ItemDialog> {
+class _ItemDialogState extends ConsumerState<_ItemDialog> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _quantityController = TextEditingController();
@@ -399,23 +415,14 @@ class _ItemDialogState extends State<_ItemDialog> {
   
   String? _selectedCategory;
 
-  final List<String> _categories = [
-    'Food & Beverage',
-    'Cleaning',
-    'Personal Care',
-    'Electronics',
-    'Clothing',
-    'Other',
-  ];
-
   @override
   void initState() {
     super.initState();
     if (widget.item != null) {
-      _descriptionController.text = widget.item!.description;
+      _descriptionController.text = widget.item!.itemName;
       _quantityController.text = widget.item!.quantity.toString();
-      _unitPriceController.text = widget.item!.unitPrice.toString();
-      _selectedCategory = widget.item!.category;
+      _unitPriceController.text = widget.item!.unitPrice?.toString() ?? '';
+      _selectedCategory = widget.item!.categoryId;
     } else {
       _quantityController.text = '1';
     }
@@ -429,11 +436,6 @@ class _ItemDialogState extends State<_ItemDialog> {
     super.dispose();
   }
 
-  void _calculateAmount() {
-    // Amount calculation is handled in the save method
-    // This method is kept for future use if needed
-  }
-
   void _saveItem() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -442,11 +444,12 @@ class _ItemDialogState extends State<_ItemDialog> {
     final amount = quantity * unitPrice;
 
     final item = ExpenseItem(
-      description: _descriptionController.text.trim(),
+      itemName: _descriptionController.text.trim(),
       quantity: quantity,
       unitPrice: unitPrice,
       amount: amount,
-      category: _selectedCategory,
+      categoryId: _selectedCategory?.isEmpty == true ? null : _selectedCategory,
+      kdvRate: 20.0, // Explicitly set KDV rate
     );
 
     widget.onAdd(item);
@@ -457,91 +460,113 @@ class _ItemDialogState extends State<_ItemDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.item == null ? 'Add Item' : 'Edit Item'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
-                  labelText: 'Item Description',
+                  labelText: 'Item Name',
                   hintText: 'e.g. Bread, Milk, T-shirt',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Item description is required';
+                    return 'Item name is required';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => _calculateAmount(),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Quantity is required';
-                        }
-                        if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                          return 'Enter valid quantity';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _unitPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Unit Price',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => _calculateAmount(),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Price is required';
-                        }
-                        if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                          return 'Enter valid price';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(
+                  labelText: 'Quantity',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Quantity is required';
+                  }
+                  if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                    return 'Enter valid quantity';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
+              TextFormField(
+                controller: _unitPriceController,
                 decoration: const InputDecoration(
-                  labelText: 'Category (Optional)',
+                  labelText: 'Unit Price',
                   border: OutlineInputBorder(),
                 ),
-                items: _categories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Price is required';
+                  }
+                  if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                    return 'Enter valid price';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              Consumer(
+                builder: (context, ref, child) {
+                  final categoriesAsync = ref.watch(categoriesProvider);
+                  
+                  return categoriesAsync.when(
+                    data: (categories) => DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Category (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('AI will categorize'),
+                        ),
+                        ...categories.map((category) {
+                          return DropdownMenuItem(
+                            value: category.id,
+                            child: Text(category.name),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                        });
+                      },
+                    ),
+                    loading: () => DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Category (Loading...)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [],
+                      onChanged: null,
+                    ),
+                    error: (error, stack) => DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Category (Error: ${error.toString()})',
+                        border: const OutlineInputBorder(),
+                        errorText: 'Failed to load categories',
+                      ),
+                      items: [],
+                      onChanged: null,
+                    ),
                   );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
                 },
               ),
             ],

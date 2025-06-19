@@ -53,7 +53,7 @@ class StorageService {
   // Onboarding operations
   Future<void> setOnboardingCompleted(bool completed) async {
     await _secureStorage.write(
-      key: AppConfig.onboardingKey, 
+      key: AppConfig.onboardingKey,
       value: completed.toString(),
     );
   }
@@ -66,7 +66,7 @@ class StorageService {
   // Biometric operations
   Future<void> setBiometricEnabled(bool enabled) async {
     await _secureStorage.write(
-      key: AppConfig.biometricKey, 
+      key: AppConfig.biometricKey,
       value: enabled.toString(),
     );
   }
@@ -90,4 +90,17 @@ class StorageService {
   Future<Map<String, String>> readAll() async {
     return await _secureStorage.readAll();
   }
-} 
+
+  // Generic data operations
+  Future<void> saveData(String key, String value) async {
+    await _secureStorage.write(key: key, value: value);
+  }
+
+  Future<String?> getData(String key) async {
+    return await _secureStorage.read(key: key);
+  }
+
+  Future<void> deleteData(String key) async {
+    await _secureStorage.delete(key: key);
+  }
+}
