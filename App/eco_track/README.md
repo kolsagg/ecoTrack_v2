@@ -80,10 +80,31 @@ Projenin yerel ortamınızda çalıştırılması için aşağıdaki adımları 
     cd [KLONLANAN_KLASÖR_ADİ]
     ```
 
-3.  **Ortam Değişkenlerinin Ayarlanması:**
+3.  **Firebase Konfigürasyonu (Güvenlik):**
+    **ÖNEMLİ:** Firebase konfigürasyon dosyaları güvenlik nedeniyle repository'de bulunmamaktadır.
+    
+    Aşağıdaki dosyaları kendi Firebase projenizden alarak oluşturmanız gerekmektedir:
+    
+    ```bash
+    # Firebase options dosyasını oluşturun
+    cp lib/firebase_options.dart.example lib/firebase_options.dart
+    
+    # Android Google Services dosyasını oluşturun
+    cp android/app/google-services.json.example android/app/google-services.json
+    ```
+    
+    Ardından bu dosyaları kendi Firebase projenizin bilgileriyle güncelleyin:
+    - Firebase Console'dan projenizi seçin
+    - Android app konfigürasyonundan `google-services.json` dosyasını indirin
+    - FlutterFire CLI ile `firebase_options.dart` dosyasını yeniden oluşturun:
+      ```bash
+      flutterfire configure
+      ```
+
+4.  **Ortam Değişkenlerinin Ayarlanması:**
     Supabase proje URL'nizi ve Anon (public) API anahtarınızı içeren ortam değişkenlerini veya bir yapılandırma dosyasını ayarlayın. (Örnek: `.env` dosyası veya Flutter'da `lib/config.dart`).
 
-4.  **Bağımlılıkların Yüklenmesi:**
+5.  **Bağımlılıkların Yüklenmesi:**
     *   Flutter (Frontend):
         ```bash
         cd frontend
@@ -95,10 +116,10 @@ Projenin yerel ortamınızda çalıştırılması için aşağıdaki adımları 
         pip install -r requirements.txt
         ```
 
-5.  **Veritabanı Kurulumu:**
+6.  **Veritabanı Kurulumu:**
     Supabase projenizde `schema.sql` (veya ilgili dosya) içerisindeki tabloları ve gerekli RLS (Row Level Security) politikalarını ayarlayın.
 
-6.  **Uygulamayı Çalıştırma:**
+7.  **Uygulamayı Çalıştırma:**
     *   Flutter (Frontend):
         ```bash
         cd frontend
