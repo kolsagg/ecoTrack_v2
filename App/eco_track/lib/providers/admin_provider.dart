@@ -80,11 +80,41 @@ class AdminDashboardNotifier extends StateNotifier<AdminDashboardState> {
     }
   }
 
-  // Admin permissions kontrolü artık AuthService'de yapılıyor
-  // Bu metod sadece geriye uyumluluk için bırakıldı
+  // Her login/logout işleminden sonra çağrılacak metod
+  Future<void> refreshAdminStatus() async {
+    if (_authService.isAuthenticated) {
+      // Kullanıcı giriş yapmışsa admin kontrolü yap
+      await _authService.checkAdminPermissions();
+      final isAdmin = _authService.isAdmin;
+      state = state.copyWith(isAdmin: isAdmin);
+
+      if (isAdmin) {
+        await loadDashboardData();
+      } else {
+        // Admin değilse dashboard data'yı temizle
+        _clearDashboardData();
+      }
+    } else {
+      // Kullanıcı çıkış yapmışsa admin state'i temizle
+      state = state.copyWith(isAdmin: false);
+      _clearDashboardData();
+    }
+  }
+
+  // Dashboard data'yı temizle
+  void _clearDashboardData() {
+    state = state.copyWith(
+      dashboardData: null,
+      systemMetrics: null,
+      systemHealth: null,
+      userActivities: const [],
+      error: null,
+    );
+  }
+
+  // Admin permissions kontrolü artık refreshAdminStatus'u çağırıyor
   Future<void> checkAdminPermissions() async {
-    final isAdmin = _authService.isAdmin;
-    state = state.copyWith(isAdmin: isAdmin);
+    await refreshAdminStatus();
   }
 
   // Load dashboard data
@@ -472,3 +502,11 @@ final merchantManagementProvider =
       final merchantService = ref.read(merchantServiceProvider);
       return MerchantManagementNotifier(merchantService);
     });
+
+// Admin refresh helper provider
+final adminRefreshProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    final adminNotifier = ref.read(adminDashboardProvider.notifier);
+    await adminNotifier.refreshAdminStatus();
+  };
+});

@@ -3,6 +3,76 @@ import 'package:equatable/equatable.dart';
 
 part 'merchant_models.g.dart';
 
+// Business Type Enum
+enum BusinessType {
+  @JsonValue('restaurant')
+  restaurant,
+  @JsonValue('retail')
+  retail,
+  @JsonValue('grocery')
+  grocery,
+  @JsonValue('pharmacy')
+  pharmacy,
+  @JsonValue('gas_station')
+  gasStation,
+  @JsonValue('clothing')
+  clothing,
+  @JsonValue('electronics')
+  electronics,
+  @JsonValue('other')
+  other;
+
+  String get displayName {
+    switch (this) {
+      case BusinessType.restaurant:
+        return 'Restoran';
+      case BusinessType.retail:
+        return 'Perakende';
+      case BusinessType.grocery:
+        return 'Market';
+      case BusinessType.pharmacy:
+        return 'Eczane';
+      case BusinessType.gasStation:
+        return 'Benzin İstasyonu';
+      case BusinessType.clothing:
+        return 'Giyim';
+      case BusinessType.electronics:
+        return 'Elektronik';
+      case BusinessType.other:
+        return 'Diğer';
+    }
+  }
+
+  String get value {
+    switch (this) {
+      case BusinessType.restaurant:
+        return 'restaurant';
+      case BusinessType.retail:
+        return 'retail';
+      case BusinessType.grocery:
+        return 'grocery';
+      case BusinessType.pharmacy:
+        return 'pharmacy';
+      case BusinessType.gasStation:
+        return 'gas_station';
+      case BusinessType.clothing:
+        return 'clothing';
+      case BusinessType.electronics:
+        return 'electronics';
+      case BusinessType.other:
+        return 'other';
+    }
+  }
+
+  static BusinessType? fromString(String? value) {
+    if (value == null) return null;
+    for (final type in BusinessType.values) {
+      if (type.value == value) return type;
+    }
+    return null;
+  }
+}
+
 // Merchant Model
 @JsonSerializable()
 class Merchant extends Equatable {

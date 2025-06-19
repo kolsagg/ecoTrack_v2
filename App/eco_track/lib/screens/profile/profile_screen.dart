@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/admin_provider.dart';
 import '../../providers/profile_stats_provider.dart';
 import '../../widgets/common/custom_button.dart';
 
@@ -346,6 +347,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       text: 'Log Out',
                       onPressed: () async {
                         await ref.read(authStateProvider.notifier).logout();
+
+                        // Logout sonrası admin state'i güncelle
+                        final refreshAdmin = ref.read(adminRefreshProvider);
+                        await refreshAdmin();
                       },
                       isOutlined: true,
                       icon: Icons.logout,
@@ -388,6 +393,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           await ref
                               .read(authStateProvider.notifier)
                               .logoutFromAllDevices();
+
+                          // Logout sonrası admin state'i güncelle
+                          final refreshAdmin = ref.read(adminRefreshProvider);
+                          await refreshAdmin();
                         }
                       },
                       isOutlined: true,

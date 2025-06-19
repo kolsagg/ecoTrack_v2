@@ -37,7 +37,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -49,35 +49,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
 
     try {
-      await ref.read(authStateProvider.notifier).register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-      );
-      
+      await ref
+          .read(authStateProvider.notifier)
+          .register(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+          );
+
       if (mounted) {
         // Registration başarılı - email confirmation mesajı göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Registration successful! Please check your email to confirm your account.'),
+            content: const Text(
+              'Registration successful! Please check your email to confirm your account.',
+            ),
             backgroundColor: AppConstants.successColor,
             duration: const Duration(seconds: 5),
           ),
         );
-        
+
         // Login ekranına geri dön
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed: ${e.toString()}'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      }
+      // Hata auth state listener tarafından handle edilecek
+      // Bu blok sadece beklenmedik durumlar için
+      print('Registration error not handled by auth state: $e');
     }
   }
 
@@ -85,6 +84,53 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final isLoading = authState.isLoading;
+
+    // Auth state error'ını dinle ve göster
+    ref.listen<AuthState>(authStateProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        String errorMessage = 'Registration failed';
+
+        // Hata tipine göre özel mesajlar
+        final errorString = next.error!.toLowerCase();
+        if (errorString.contains('email already exists') ||
+            errorString.contains('user already exists') ||
+            errorString.contains('email is already registered')) {
+          errorMessage = 'This email address is already registered';
+        } else if (errorString.contains('invalid email')) {
+          errorMessage = 'Invalid email address';
+        } else if (errorString.contains('password too weak') ||
+            errorString.contains('password requirements')) {
+          errorMessage = 'Password is too weak';
+        } else if (errorString.contains('validation') ||
+            errorString.contains('422')) {
+          errorMessage = 'Invalid information';
+        } else if (errorString.contains('network') ||
+            errorString.contains('connection')) {
+          errorMessage = 'Please check your internet connection';
+        } else if (errorString.contains('server') ||
+            errorString.contains('500')) {
+          errorMessage = 'Server error. Please try again later';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppConstants.errorColor,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+
+        // Hata gösterildikten sonra temizle
+        ref.read(authStateProvider.notifier).clearError();
+      }
+    });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -121,7 +167,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: AppConstants.spacingSmall),
-                    
+
                     // Title
                     Text(
                       'Create Account',
@@ -130,18 +176,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         fontWeight: AppConstants.fontWeightBold,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXSmall),
-                    
+
                     Text(
                       'Join EcoTrack and start your sustainable journey',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Name Fields Row
                     Row(
                       children: [
@@ -184,9 +230,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Email Field
                     CustomTextField(
                       controller: _emailController,
@@ -199,15 +245,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Email required';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return 'Invalid email format';
                         }
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Password Field
                     CustomTextField(
                       controller: _passwordController,
@@ -218,7 +266,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       textInputAction: TextInputAction.next,
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: AppConstants.textSecondaryColor,
                         ),
                         onPressed: () {
@@ -234,15 +284,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         if (value.length < 8) {
                           return 'Min 8 characters';
                         }
-                        if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+                        if (!RegExp(
+                          r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)',
+                        ).hasMatch(value)) {
                           return 'Need A-z, 0-9';
                         }
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Confirm Password Field
                     CustomTextField(
                       controller: _confirmPasswordController,
@@ -253,7 +305,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       textInputAction: TextInputAction.done,
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: AppConstants.textSecondaryColor,
                         ),
                         onPressed: () {
@@ -272,9 +326,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Terms and Conditions
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -287,7 +341,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             });
                           },
                           activeColor: AppConstants.primaryColor,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                         ),
                         Expanded(
@@ -299,9 +354,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             },
                             child: RichText(
                               text: TextSpan(
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppConstants.textSecondaryColor,
-                                ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppConstants.textSecondaryColor,
+                                    ),
                                 children: [
                                   const TextSpan(text: 'I agree to '),
                                   TextSpan(
@@ -326,27 +382,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Register Button
                     CustomButton(
                       text: 'Create Account',
                       onPressed: _handleRegister,
                       isLoading: isLoading,
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'Already have an account? ',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppConstants.textSecondaryColor,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
                         ),
                         TextButton(
                           onPressed: () {
@@ -371,4 +428,4 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
   }
-} 
+}

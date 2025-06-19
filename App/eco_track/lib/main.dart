@@ -59,23 +59,44 @@ class EcoTrackApp extends StatelessWidget {
 }
 
 // Authentication wrapper to determine which screen to show
-class AuthWrapper extends ConsumerWidget {
+class AuthWrapper extends ConsumerStatefulWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends ConsumerState<AuthWrapper> {
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
-    // Show splash screen while checking authentication
-    if (authState.isLoading) {
-      return const SplashScreen();
+    print(
+      '🏠 AuthWrapper - isLoading: ${authState.isLoading}, isAuthenticated: ${authState.isAuthenticated}, error: ${authState.error}',
+    );
+
+    // Authenticated durumuna göre temel widget'ı belirle
+    Widget baseWidget;
+    if (authState.isAuthenticated) {
+      print('🏠 Base: MainNavigation - authenticated');
+      baseWidget = const MainNavigation();
+    } else {
+      print('🏠 Base: LoginScreen - not authenticated');
+      baseWidget = const LoginScreen();
     }
 
-    // Show main navigation if authenticated, login screen if not
-    if (authState.isAuthenticated) {
-      return const MainNavigation();
-    } else {
-      return const LoginScreen();
+    // Loading durumunda SplashScreen'i overlay olarak göster
+    if (authState.isLoading) {
+      print('🏠 Overlay: SplashScreen - loading');
+      return Stack(
+        children: [
+          baseWidget, // LoginScreen veya MainNavigation arkada kalır
+          const SplashScreen(), // SplashScreen üstte overlay olarak
+        ],
+      );
     }
+
+    // Loading yoksa sadece temel widget'ı göster
+    return baseWidget;
   }
 }

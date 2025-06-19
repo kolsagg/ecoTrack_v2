@@ -11,7 +11,8 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -29,14 +30,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      await ref.read(authStateProvider.notifier).requestPasswordReset(
-        _emailController.text.trim(),
-      );
-      
+      await ref
+          .read(authStateProvider.notifier)
+          .requestPasswordReset(_emailController.text.trim());
+
       setState(() {
         _emailSent = true;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -46,14 +47,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send reset email: ${e.toString()}'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      }
+      // Hata auth state listener tarafından handle edilecek
+      // Bu blok sadece beklenmedik durumlar için
+      print('Password reset error not handled by auth state: $e');
     }
   }
 
@@ -61,6 +57,50 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final isLoading = authState.isLoading;
+
+    // Auth state error'ını dinle ve göster
+    ref.listen<AuthState>(authStateProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        String errorMessage = 'Şifre sıfırlama başarısız oldu';
+
+        // Hata tipine göre özel mesajlar
+        final errorString = next.error!.toLowerCase();
+        if (errorString.contains('user not found') ||
+            errorString.contains('email not found') ||
+            errorString.contains('404')) {
+          errorMessage = 'No user found with this email address';
+        } else if (errorString.contains('invalid email')) {
+          errorMessage = 'Invalid email address';
+        } else if (errorString.contains('too many requests') ||
+            errorString.contains('429')) {
+          errorMessage = 'Too many attempts. Please try again later';
+        } else if (errorString.contains('network') ||
+            errorString.contains('connection')) {
+          errorMessage = 'Please check your internet connection';
+        } else if (errorString.contains('server') ||
+            errorString.contains('500')) {
+          errorMessage = 'Server error. Please try again later';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppConstants.errorColor,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+
+        // Hata gösterildikten sonra temizle
+        ref.read(authStateProvider.notifier).clearError();
+      }
+    });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -97,31 +137,32 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: AppConstants.spacingXLarge),
-                    
+
                     // Icon
                     Icon(
                       _emailSent ? Icons.mark_email_read : Icons.lock_reset,
                       size: AppConstants.iconSizeXLarge * 2,
                       color: AppConstants.primaryColor,
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXLarge),
-                    
+
                     // Title
                     Text(
                       _emailSent ? 'Check Your Email' : 'Forgot Password?',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppConstants.textPrimaryColor,
-                        fontWeight: AppConstants.fontWeightBold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: AppConstants.textPrimaryColor,
+                            fontWeight: AppConstants.fontWeightBold,
+                          ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingMedium),
-                    
+
                     // Description
                     Text(
-                      _emailSent 
+                      _emailSent
                           ? 'We\'ve sent a password reset link to ${_emailController.text.trim()}'
                           : 'Don\'t worry! Enter your email address and we\'ll send you a link to reset your password.',
                       textAlign: TextAlign.center,
@@ -129,9 +170,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXXLarge),
-                    
+
                     if (!_emailSent) ...[
                       // Email Field
                       CustomTextField(
@@ -144,15 +185,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
                           return null;
                         },
                       ),
-                      
+
                       const SizedBox(height: AppConstants.spacingXLarge),
-                      
+
                       // Reset Button
                       CustomButton(
                         text: 'Send Reset Link',
@@ -170,9 +213,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         },
                         isOutlined: true,
                       ),
-                      
+
                       const SizedBox(height: AppConstants.spacingMedium),
-                      
+
                       CustomButton(
                         text: 'Back to Login',
                         onPressed: () {
@@ -180,9 +223,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         },
                       ),
                     ],
-                    
+
                     const SizedBox(height: AppConstants.spacingXXLarge),
-                    
+
                     // Help text
                     if (!_emailSent)
                       Text(
@@ -192,7 +235,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           color: AppConstants.textSecondaryColor,
                         ),
                       ),
-                    
+
                     if (!_emailSent)
                       TextButton(
                         onPressed: () {
@@ -215,4 +258,4 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       ),
     );
   }
-} 
+}

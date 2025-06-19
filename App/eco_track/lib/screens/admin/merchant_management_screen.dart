@@ -530,18 +530,20 @@ class _MerchantFormDialog extends StatefulWidget {
 class _MerchantFormDialogState extends State<_MerchantFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _descriptionController;
   late final TextEditingController _addressController;
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _websiteController;
+  late final TextEditingController _taxNumberController;
+
+  BusinessType? _selectedBusinessType;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.merchant?.name ?? '');
-    _descriptionController = TextEditingController(
-      text: widget.merchant?.businessType ?? '',
+    _selectedBusinessType = BusinessType.fromString(
+      widget.merchant?.businessType,
     );
     _addressController = TextEditingController(
       text: widget.merchant?.address ?? '',
@@ -555,16 +557,19 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
     _websiteController = TextEditingController(
       text: widget.merchant?.webhookUrl ?? '',
     );
+    _taxNumberController = TextEditingController(
+      text: widget.merchant?.taxNumber ?? '',
+    );
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _descriptionController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _websiteController.dispose();
+    _taxNumberController.dispose();
     super.dispose();
   }
 
@@ -583,30 +588,40 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Merchant Name *',
+                    labelText: 'İşletme Adı *',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Merchant name is required';
+                      return 'İşletme adı zorunludur';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
+                DropdownButtonFormField<BusinessType>(
+                  value: _selectedBusinessType,
                   decoration: const InputDecoration(
-                    labelText: 'Business Type',
+                    labelText: 'İşletme Türü',
                     border: OutlineInputBorder(),
                   ),
-                  maxLines: 3,
+                  items: BusinessType.values.map((type) {
+                    return DropdownMenuItem<BusinessType>(
+                      value: type,
+                      child: Text(type.displayName),
+                    );
+                  }).toList(),
+                  onChanged: (BusinessType? value) {
+                    setState(() {
+                      _selectedBusinessType = value;
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _addressController,
                   decoration: const InputDecoration(
-                    labelText: 'Address',
+                    labelText: 'Adres',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 2,
@@ -615,7 +630,7 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                 TextFormField(
                   controller: _phoneController,
                   decoration: const InputDecoration(
-                    labelText: 'Phone',
+                    labelText: 'Telefon',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.phone,
@@ -624,7 +639,7 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    labelText: 'E-mail',
+                    labelText: 'E-posta',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -633,11 +648,20 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                       if (!RegExp(
                         r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                       ).hasMatch(value)) {
-                        return 'Please enter a valid e-mail address';
+                        return 'Geçerli bir e-posta adresi giriniz';
                       }
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _taxNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Vergi Numarası',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -656,9 +680,9 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('İptal'),
         ),
-        ElevatedButton(onPressed: _saveMerchant, child: const Text('Save')),
+        ElevatedButton(onPressed: _saveMerchant, child: const Text('Kaydet')),
       ],
     );
   }
@@ -667,9 +691,7 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
     if (_formKey.currentState!.validate()) {
       final request = MerchantCreateRequest(
         name: _nameController.text.trim(),
-        businessType: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
+        businessType: _selectedBusinessType?.value,
         address: _addressController.text.trim().isEmpty
             ? null
             : _addressController.text.trim(),
@@ -679,6 +701,9 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
         contactEmail: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
+        taxNumber: _taxNumberController.text.trim().isEmpty
+            ? null
+            : _taxNumberController.text.trim(),
         webhookUrl: _websiteController.text.trim().isEmpty
             ? null
             : _websiteController.text.trim(),

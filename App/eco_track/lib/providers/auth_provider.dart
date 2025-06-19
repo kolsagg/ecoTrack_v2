@@ -140,9 +140,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
+        error: null, // Başarılı durumda error'ı temizle
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      print('🔥 AuthProvider loginWithRememberMe error: $e');
+      print('🔥 Error type: ${e.runtimeType}');
+
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+        isAuthenticated: false, // Hata durumunda authenticated false yap
+      );
+
+      print('🔥 State after error: ${state.error}');
+      print(
+        '🔥 State updated - loading: ${state.isLoading}, error: ${state.error}',
+      );
       rethrow;
     }
   }

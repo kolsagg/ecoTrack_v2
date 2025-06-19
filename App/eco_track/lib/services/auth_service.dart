@@ -79,6 +79,11 @@ class AuthService {
     }
   }
 
+  // Public admin permissions kontrol metodu - her login/logout sonrası çağrılabilir
+  Future<void> checkAdminPermissions() async {
+    await _checkAdminPermissions();
+  }
+
   // Validate current token with backend
   Future<bool> validateToken() async {
     try {
