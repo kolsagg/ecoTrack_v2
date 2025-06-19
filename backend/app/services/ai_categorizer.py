@@ -143,7 +143,7 @@ class AICategorizer:
 
     async def categorize_expense(self, description: str, merchant_name: str = None, amount: float = None) -> Dict[str, Any]:
         """
-        Categorize an expense using AI and rule-based approaches
+        Categorize an expense using both AI and rule-based approaches
         
         Args:
             description: Expense description
@@ -156,26 +156,25 @@ class AICategorizer:
         try:
             logger.info(f"Categorizing expense: {description}")
             
-            # First try rule-based categorization
+            # Always get rule-based result
             rule_based_result = self._rule_based_categorization(description, merchant_name)
+            logger.info(f"Rule-based result: {rule_based_result['category']} (confidence: {rule_based_result['confidence']})")
             
-            # If rule-based has high confidence, use it
-            if rule_based_result['confidence'] >= 0.8:
-                logger.info(f"High confidence rule-based categorization: {rule_based_result['category']}")
-                return rule_based_result
-            
-            # Try AI categorization if model is available
+            # Always try AI categorization if model is available
             ai_result = None
             if self._model_available:
                 try:
                     ai_result = await self._ai_categorization(description, merchant_name, amount)
+                    logger.info(f"AI result: {ai_result['category']} (confidence: {ai_result['confidence']})")
                 except Exception as e:
                     logger.warning(f"AI categorization failed: {str(e)}")
+            else:
+                logger.info("AI model not available, using rule-based only")
             
-            # Combine results
+            # Always combine results (AI gets priority if available)
             final_result = self._combine_categorization_results(rule_based_result, ai_result)
             
-            logger.info(f"Final categorization: {final_result['category']} (confidence: {final_result['confidence']})")
+            logger.info(f"Final categorization: {final_result['category']} (confidence: {final_result['confidence']}, method: {final_result['method']})")
             return final_result
             
         except Exception as e:
@@ -385,27 +384,32 @@ Now categorize:"""
             raise
 
     def _combine_categorization_results(self, rule_result: Dict[str, Any], ai_result: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Combine rule-based and AI categorization results"""
+        """Combine rule-based and AI categorization results with AI priority"""
         if not ai_result:
+            rule_result['method'] = 'rule_based_only'
             return rule_result
         
-        # If both methods agree, boost confidence
+        # If both methods agree, boost confidence significantly
         if rule_result['category'] == ai_result['category']:
-            combined_confidence = min((rule_result['confidence'] + ai_result['confidence']) / 2 * 1.3, 1.0)
+            # Give more weight to AI when they agree
+            combined_confidence = min((ai_result['confidence'] * 0.7 + rule_result['confidence'] * 0.3) * 1.2, 1.0)
             return {
-                'category': rule_result['category'],
-                'category_name': rule_result['category_name'],
+                'category': ai_result['category'],
+                'category_name': ai_result['category_name'],
                 'confidence': combined_confidence,
-                'method': 'combined',
-                'reasoning': f"Rule-based: {rule_result['reasoning']}; AI: {ai_result['reasoning']}"
+                'method': 'ai_and_rule_agree',
+                'reasoning': f"AI: {ai_result['reasoning']}; Rule-based also agrees: {rule_result['reasoning']}"
             }
         
-        # If they disagree, use the one with higher confidence
-        if ai_result['confidence'] > rule_result['confidence']:
+        # If they disagree, prioritize AI unless it has very low confidence
+        if ai_result['confidence'] >= 0.3:  # Lower threshold to prefer AI
             ai_result['method'] = 'ai_preferred'
+            ai_result['reasoning'] = f"AI: {ai_result['reasoning']} (Rule-based suggested: {rule_result['category']})"
             return ai_result
         else:
-            rule_result['method'] = 'rule_preferred'
+            # Only use rule-based if AI has very low confidence
+            rule_result['method'] = 'rule_preferred_low_ai_confidence'
+            rule_result['reasoning'] = f"Rule-based: {rule_result['reasoning']} (AI had low confidence: {ai_result['confidence']:.2f})"
             return rule_result
 
     async def categorize_bulk_expenses(self, expenses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
