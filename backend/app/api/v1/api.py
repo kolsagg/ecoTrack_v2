@@ -1,12 +1,15 @@
 from fastapi import APIRouter
 from app.auth import auth_router
-from app.api.v1 import receipts, expenses, categories, merchants, webhooks, loyalty, reviews, devices
+from app.api.v1 import receipts, expenses, categories, merchants, webhooks, loyalty, reviews, devices, admin
 from app.api import reporting, budget
 
 api_router = APIRouter()
 
 # Include auth router
 api_router.include_router(auth_router, prefix="/auth")
+
+# Include admin router
+api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 
 # Include business logic routers
 api_router.include_router(receipts.router, prefix="/receipts", tags=["receipts"])
