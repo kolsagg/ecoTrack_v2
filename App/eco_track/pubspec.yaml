@@ -80,6 +80,10 @@ dependencies:
   device_info_plus: ^11.4.0
   package_info_plus: ^8.3.0
   qr_flutter: ^4.1.0
+  
+  # Remember Me özelliği için gerekli paketler
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:

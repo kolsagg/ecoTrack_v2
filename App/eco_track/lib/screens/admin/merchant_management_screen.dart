@@ -235,7 +235,7 @@ class _MerchantManagementScreenState
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (merchant.description != null) Text(merchant.description!),
+            if (merchant.businessType != null) Text(merchant.businessType!),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -278,12 +278,14 @@ class _MerchantManagementScreenState
               children: [
                 if (merchant.address != null)
                   _buildInfoRow('Address', merchant.address!),
-                if (merchant.phone != null)
-                  _buildInfoRow('Phone', merchant.phone!),
-                if (merchant.email != null)
-                  _buildInfoRow('E-mail', merchant.email!),
-                if (merchant.website != null)
-                  _buildInfoRow('Website', merchant.website!),
+                if (merchant.contactPhone != null)
+                  _buildInfoRow('Phone', merchant.contactPhone!),
+                if (merchant.contactEmail != null)
+                  _buildInfoRow('E-mail', merchant.contactEmail!),
+                if (merchant.webhookUrl != null)
+                  _buildInfoRow('Webhook URL', merchant.webhookUrl!),
+                if (merchant.taxNumber != null)
+                  _buildInfoRow('Tax Number', merchant.taxNumber!),
                 if (merchant.apiKey != null)
                   _buildApiKeyRow(merchant.apiKey!, merchant.id),
                 const SizedBox(height: 16),
@@ -309,14 +311,6 @@ class _MerchantManagementScreenState
                         backgroundColor: merchant.isActive
                             ? Colors.orange
                             : Colors.green,
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => _deleteMerchant(merchant),
-                      icon: const Icon(Icons.delete, size: 16),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
                       ),
                     ),
                   ],
@@ -420,11 +414,13 @@ class _MerchantManagementScreenState
         onSave: (request) async {
           final updateRequest = MerchantUpdateRequest(
             name: request.name,
-            description: request.description,
+            businessType: request.businessType,
             address: request.address,
-            phone: request.phone,
-            email: request.email,
-            website: request.website,
+            contactPhone: request.contactPhone,
+            contactEmail: request.contactEmail,
+            webhookUrl: request.webhookUrl,
+            taxNumber: request.taxNumber,
+            settings: request.settings,
           );
 
           final success = await ref
@@ -473,39 +469,6 @@ class _MerchantManagementScreenState
               }
             },
             child: Text(merchant.isActive ? 'Deactivate' : 'Activate'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteMerchant(Merchant merchant) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Merchant'),
-        content: Text(
-          '${merchant.name} merchant\'ı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await ref
-                  .read(merchantManagementProvider.notifier)
-                  .deleteMerchant(merchant.id);
-              if (success && mounted) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Merchant deleted successfully')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
           ),
         ],
       ),
@@ -578,19 +541,19 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.merchant?.name ?? '');
     _descriptionController = TextEditingController(
-      text: widget.merchant?.description ?? '',
+      text: widget.merchant?.businessType ?? '',
     );
     _addressController = TextEditingController(
       text: widget.merchant?.address ?? '',
     );
     _phoneController = TextEditingController(
-      text: widget.merchant?.phone ?? '',
+      text: widget.merchant?.contactPhone ?? '',
     );
     _emailController = TextEditingController(
-      text: widget.merchant?.email ?? '',
+      text: widget.merchant?.contactEmail ?? '',
     );
     _websiteController = TextEditingController(
-      text: widget.merchant?.website ?? '',
+      text: widget.merchant?.webhookUrl ?? '',
     );
   }
 
@@ -634,7 +597,7 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'Description',
+                    labelText: 'Business Type',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -680,7 +643,7 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
                 TextFormField(
                   controller: _websiteController,
                   decoration: const InputDecoration(
-                    labelText: 'Website',
+                    labelText: 'Webhook URL',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.url,
@@ -704,19 +667,19 @@ class _MerchantFormDialogState extends State<_MerchantFormDialog> {
     if (_formKey.currentState!.validate()) {
       final request = MerchantCreateRequest(
         name: _nameController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
+        businessType: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
         address: _addressController.text.trim().isEmpty
             ? null
             : _addressController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty
+        contactPhone: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty
+        contactEmail: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
-        website: _websiteController.text.trim().isEmpty
+        webhookUrl: _websiteController.text.trim().isEmpty
             ? null
             : _websiteController.text.trim(),
       );

@@ -9,13 +9,15 @@ part of 'merchant_models.dart';
 Merchant _$MerchantFromJson(Map<String, dynamic> json) => Merchant(
   id: json['id'] as String,
   name: json['name'] as String,
-  description: json['description'] as String?,
-  address: json['address'] as String?,
-  phone: json['phone'] as String?,
-  email: json['email'] as String?,
-  website: json['website'] as String?,
+  businessType: json['business_type'] as String?,
   apiKey: json['api_key'] as String?,
+  webhookUrl: json['webhook_url'] as String?,
   isActive: json['is_active'] as bool,
+  contactEmail: json['contact_email'] as String?,
+  contactPhone: json['contact_phone'] as String?,
+  address: json['address'] as String?,
+  taxNumber: json['tax_number'] as String?,
+  settings: json['settings'] as Map<String, dynamic>?,
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
 );
@@ -23,13 +25,15 @@ Merchant _$MerchantFromJson(Map<String, dynamic> json) => Merchant(
 Map<String, dynamic> _$MerchantToJson(Merchant instance) => <String, dynamic>{
   'id': instance.id,
   'name': instance.name,
-  'description': instance.description,
-  'address': instance.address,
-  'phone': instance.phone,
-  'email': instance.email,
-  'website': instance.website,
+  'business_type': instance.businessType,
   'api_key': instance.apiKey,
+  'webhook_url': instance.webhookUrl,
   'is_active': instance.isActive,
+  'contact_email': instance.contactEmail,
+  'contact_phone': instance.contactPhone,
+  'address': instance.address,
+  'tax_number': instance.taxNumber,
+  'settings': instance.settings,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
 };
@@ -38,33 +42,39 @@ MerchantCreateRequest _$MerchantCreateRequestFromJson(
   Map<String, dynamic> json,
 ) => MerchantCreateRequest(
   name: json['name'] as String,
-  description: json['description'] as String?,
+  businessType: json['business_type'] as String?,
+  webhookUrl: json['webhook_url'] as String?,
+  contactEmail: json['contact_email'] as String?,
+  contactPhone: json['contact_phone'] as String?,
   address: json['address'] as String?,
-  phone: json['phone'] as String?,
-  email: json['email'] as String?,
-  website: json['website'] as String?,
+  taxNumber: json['tax_number'] as String?,
+  settings: json['settings'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$MerchantCreateRequestToJson(
   MerchantCreateRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
-  'description': instance.description,
+  'business_type': instance.businessType,
+  'webhook_url': instance.webhookUrl,
+  'contact_email': instance.contactEmail,
+  'contact_phone': instance.contactPhone,
   'address': instance.address,
-  'phone': instance.phone,
-  'email': instance.email,
-  'website': instance.website,
+  'tax_number': instance.taxNumber,
+  'settings': instance.settings,
 };
 
 MerchantUpdateRequest _$MerchantUpdateRequestFromJson(
   Map<String, dynamic> json,
 ) => MerchantUpdateRequest(
   name: json['name'] as String?,
-  description: json['description'] as String?,
+  businessType: json['business_type'] as String?,
+  webhookUrl: json['webhook_url'] as String?,
+  contactEmail: json['contact_email'] as String?,
+  contactPhone: json['contact_phone'] as String?,
   address: json['address'] as String?,
-  phone: json['phone'] as String?,
-  email: json['email'] as String?,
-  website: json['website'] as String?,
+  taxNumber: json['tax_number'] as String?,
+  settings: json['settings'] as Map<String, dynamic>?,
   isActive: json['is_active'] as bool?,
 );
 
@@ -72,11 +82,13 @@ Map<String, dynamic> _$MerchantUpdateRequestToJson(
   MerchantUpdateRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
-  'description': instance.description,
+  'business_type': instance.businessType,
+  'webhook_url': instance.webhookUrl,
+  'contact_email': instance.contactEmail,
+  'contact_phone': instance.contactPhone,
   'address': instance.address,
-  'phone': instance.phone,
-  'email': instance.email,
-  'website': instance.website,
+  'tax_number': instance.taxNumber,
+  'settings': instance.settings,
   'is_active': instance.isActive,
 };
 
@@ -88,8 +100,8 @@ MerchantListResponse _$MerchantListResponseFromJson(
       .toList(),
   total: (json['total'] as num).toInt(),
   page: (json['page'] as num).toInt(),
-  perPage: (json['per_page'] as num).toInt(),
-  totalPages: (json['total_pages'] as num).toInt(),
+  size: (json['size'] as num).toInt(),
+  hasNext: json['has_next'] as bool,
 );
 
 Map<String, dynamic> _$MerchantListResponseToJson(
@@ -98,20 +110,17 @@ Map<String, dynamic> _$MerchantListResponseToJson(
   'merchants': instance.merchants,
   'total': instance.total,
   'page': instance.page,
-  'per_page': instance.perPage,
-  'total_pages': instance.totalPages,
+  'size': instance.size,
+  'has_next': instance.hasNext,
 };
 
 ApiKeyRegenerationResponse _$ApiKeyRegenerationResponseFromJson(
   Map<String, dynamic> json,
 ) => ApiKeyRegenerationResponse(
   apiKey: json['api_key'] as String,
-  regeneratedAt: DateTime.parse(json['regenerated_at'] as String),
+  message: json['message'] as String?,
 );
 
 Map<String, dynamic> _$ApiKeyRegenerationResponseToJson(
   ApiKeyRegenerationResponse instance,
-) => <String, dynamic>{
-  'api_key': instance.apiKey,
-  'regenerated_at': instance.regeneratedAt.toIso8601String(),
-};
+) => <String, dynamic>{'api_key': instance.apiKey, 'message': instance.message};

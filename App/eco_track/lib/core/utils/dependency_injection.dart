@@ -17,6 +17,7 @@ import '../../services/loyalty_service.dart';
 import '../../services/device_service.dart';
 import '../../services/admin_service.dart';
 import '../../services/merchant_service.dart';
+import '../../services/device_info_service.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/expense_repository.dart';
 import '../../data/repositories/receipt_repository.dart';
@@ -134,6 +135,8 @@ class DependencyInjection {
     getIt.registerLazySingleton<AdminService>(() => AdminService());
 
     getIt.registerLazySingleton<MerchantService>(() => MerchantService());
+
+    getIt.registerLazySingleton<DeviceInfoService>(() => DeviceInfoService());
   }
 
   static void reset() {

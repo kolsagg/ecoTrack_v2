@@ -13,12 +13,12 @@ class MerchantService {
   // Get all merchants with pagination
   Future<MerchantListResponse> getMerchants({
     int page = 1,
-    int perPage = 20,
+    int size = 20,
     String? search,
     bool? isActive,
   }) async {
     try {
-      final queryParams = <String, dynamic>{'page': page, 'per_page': perPage};
+      final queryParams = <String, dynamic>{'page': page, 'size': size};
 
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
@@ -42,12 +42,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error getting merchants: ${e.message}');
       }
-      throw Exception('Merchant listesi alınamadı: ${e.message}');
+      throw Exception('Cannot load merchant list: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error getting merchants: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error getting merchants: $e');
     }
   }
 
@@ -65,12 +65,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error getting merchant: ${e.message}');
       }
-      throw Exception('Merchant bilgileri alınamadı: ${e.message}');
+      throw Exception('Cannot load merchant details: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error getting merchant: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error getting merchant: $e');
     }
   }
 
@@ -78,7 +78,7 @@ class MerchantService {
   Future<Merchant> createMerchant(MerchantCreateRequest request) async {
     try {
       final response = await _apiService.post(
-        '/api/v1/merchants',
+        '/api/v1/merchants/',
         data: request.toJson(),
       );
 
@@ -91,12 +91,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error creating merchant: ${e.message}');
       }
-      throw Exception('Merchant oluşturulamadı: ${e.message}');
+      throw Exception('Cannot create merchant: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error creating merchant: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error creating merchant: $e');
     }
   }
 
@@ -120,12 +120,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error updating merchant: ${e.message}');
       }
-      throw Exception('Merchant güncellenemedi: ${e.message}');
+      throw Exception('Cannot update merchant: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error updating merchant: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error updating merchant: $e');
     }
   }
 
@@ -141,12 +141,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error deleting merchant: ${e.message}');
       }
-      throw Exception('Merchant silinemedi: ${e.message}');
+      throw Exception('Cannot delete merchant: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error deleting merchant: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error deleting merchant: $e');
     }
   }
 
@@ -166,12 +166,12 @@ class MerchantService {
       if (kDebugMode) {
         print('Error regenerating API key: ${e.message}');
       }
-      throw Exception('API anahtarı yenilenemedi: ${e.message}');
+      throw Exception('Cannot regenerate API key: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Unexpected error regenerating API key: $e');
       }
-      throw Exception('Beklenmeyen hata: $e');
+      throw Exception('Unexpected error regenerating API key: $e');
     }
   }
 

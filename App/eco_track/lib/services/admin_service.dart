@@ -13,6 +13,34 @@ class AdminService {
   // Get system metrics
   Future<SystemMetrics> getSystemMetrics() async {
     try {
+      // GEÇICI ÇÖZÜM: Backend endpoint hazır olmadığı için mock data
+      // TODO: Backend'de /health/metrics endpoint'i eklendikten sonra kaldırılacak
+
+      if (kDebugMode) {
+        print('Mock system metrics - returning sample metrics data');
+      }
+
+      // Mock system metrics data
+      final mockData = {
+        'total_users': 150,
+        'active_users': 89,
+        'total_merchants': 25,
+        'active_merchants': 20,
+        'total_expenses': 1250,
+        'total_receipts': 980,
+        'total_amount': 45678.90,
+        'avg_expense_amount': 36.54,
+        'last_24h_users': 12,
+        'last_24h_expenses': 45,
+        'last_24h_amount': 1234.56,
+        'system_uptime': '5 gün 12 saat',
+        'database_status': 'connected',
+        'api_response_time': 125.5,
+      };
+
+      return SystemMetrics.fromJson(mockData);
+
+      /* GERÇEK IMPLEMENTASYON (Backend hazır olduğunda):
       final response = await _apiService.get('/health/metrics');
 
       if (kDebugMode) {
@@ -20,6 +48,7 @@ class AdminService {
       }
 
       return SystemMetrics.fromJson(response.data);
+      */
     } on DioException catch (e) {
       if (kDebugMode) {
         print('Error getting system metrics: ${e.message}');
@@ -36,6 +65,29 @@ class AdminService {
   // Get system health
   Future<SystemHealth> getSystemHealth() async {
     try {
+      // GEÇICI ÇÖZÜM: Backend endpoint hazır olmadığı için mock data
+      // TODO: Backend'de /health/detailed endpoint'i eklendikten sonra kaldırılacak
+
+      if (kDebugMode) {
+        print('Mock system health - returning sample health data');
+      }
+
+      // Mock system health data
+      final mockData = {
+        'status': 'healthy',
+        'database_status': 'connected',
+        'redis_status': 'connected',
+        'api_status': 'operational',
+        'response_time': 125.5,
+        'memory_usage': 68.2,
+        'cpu_usage': 45.1,
+        'disk_usage': 32.8,
+        'last_check': DateTime.now().toIso8601String(),
+      };
+
+      return SystemHealth.fromJson(mockData);
+
+      /* GERÇEK IMPLEMENTASYON (Backend hazır olduğunda):
       final response = await _apiService.get('/health/detailed');
 
       if (kDebugMode) {
@@ -43,6 +95,7 @@ class AdminService {
       }
 
       return SystemHealth.fromJson(response.data);
+      */
     } on DioException catch (e) {
       if (kDebugMode) {
         print('Error getting system health: ${e.message}');
@@ -89,6 +142,7 @@ class AdminService {
         },
         'recent_users': [
           {
+            'user_id': 'user-001',
             'user_email': 'user1@example.com',
             'last_login': DateTime.now()
                 .subtract(const Duration(hours: 2))
@@ -98,6 +152,7 @@ class AdminService {
             'is_active': true,
           },
           {
+            'user_id': 'user-002',
             'user_email': 'user2@example.com',
             'last_login': DateTime.now()
                 .subtract(const Duration(hours: 5))
@@ -157,6 +212,7 @@ class AdminService {
       // Mock user activities data
       final mockActivities = [
         {
+          'user_id': 'admin-001',
           'user_email': 'admin@example.com',
           'last_login': DateTime.now()
               .subtract(const Duration(minutes: 30))
@@ -166,6 +222,7 @@ class AdminService {
           'is_active': true,
         },
         {
+          'user_id': 'user-001',
           'user_email': 'user1@example.com',
           'last_login': DateTime.now()
               .subtract(const Duration(hours: 2))
@@ -175,6 +232,7 @@ class AdminService {
           'is_active': true,
         },
         {
+          'user_id': 'user-002',
           'user_email': 'user2@example.com',
           'last_login': DateTime.now()
               .subtract(const Duration(hours: 5))
@@ -184,6 +242,7 @@ class AdminService {
           'is_active': true,
         },
         {
+          'user_id': 'user-003',
           'user_email': 'user3@example.com',
           'last_login': DateTime.now()
               .subtract(const Duration(days: 1))
@@ -333,29 +392,15 @@ class AdminService {
   // Check admin permissions
   Future<bool> checkAdminPermissions() async {
     try {
-      // GEÇICI ÇÖZÜM: Backend endpoint hazır olmadığı için mock admin kontrolü
-      // TODO: Backend'de /api/v1/admin/check-permissions endpoint'i eklendikten sonra kaldırılacak
-
-      // Şimdilik tüm authenticated kullanıcıları admin olarak kabul et
-      await _apiService.get('/health'); // Basit bir authenticated endpoint test
-
-      if (kDebugMode) {
-        print(
-          'Mock admin check - user is authenticated, granting admin access',
-        );
-      }
-
-      return true; // GEÇICI: Tüm kullanıcıları admin yap
-
-      /* GERÇEK IMPLEMENTASYON (Backend hazır olduğunda):
-      final response = await _apiService.get('/api/v1/admin/check-permissions');
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '/api/v1/admin/check-permissions',
+      );
 
       if (kDebugMode) {
         print('Check admin permissions response: ${response.data}');
       }
 
-      return response.data['is_admin'] ?? false;
-      */
+      return response.data?['is_admin'] ?? false;
     } on DioException catch (e) {
       if (kDebugMode) {
         print('Error checking admin permissions: ${e.message}');

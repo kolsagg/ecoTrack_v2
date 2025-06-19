@@ -5,6 +5,8 @@ import '../models/admin/admin_models.dart';
 import '../models/merchant/merchant_models.dart';
 import '../services/admin_service.dart';
 import '../services/merchant_service.dart';
+import '../services/auth_service.dart';
+import '../core/utils/dependency_injection.dart';
 
 // Admin Dashboard State
 class AdminDashboardState extends Equatable {
@@ -61,6 +63,7 @@ class AdminDashboardState extends Equatable {
 // Admin Dashboard Notifier
 class AdminDashboardNotifier extends StateNotifier<AdminDashboardState> {
   final AdminService _adminService;
+  final AuthService _authService = getIt<AuthService>();
 
   AdminDashboardNotifier(this._adminService)
     : super(const AdminDashboardState()) {
@@ -68,25 +71,20 @@ class AdminDashboardNotifier extends StateNotifier<AdminDashboardState> {
   }
 
   Future<void> _initialize() async {
-    await checkAdminPermissions();
-    if (state.isAdmin) {
+    // AuthService'den admin durumunu al (sadece okuma)
+    final isAdmin = _authService.isAdmin;
+    state = state.copyWith(isAdmin: isAdmin);
+
+    if (isAdmin) {
       await loadDashboardData();
     }
   }
 
-  // Check admin permissions
+  // Admin permissions kontrolü artık AuthService'de yapılıyor
+  // Bu metod sadece geriye uyumluluk için bırakıldı
   Future<void> checkAdminPermissions() async {
-    try {
-      state = state.copyWith(isLoading: true, error: null);
-      final isAdmin = await _adminService.checkAdminPermissions();
-      state = state.copyWith(isAdmin: isAdmin, isLoading: false);
-    } catch (e) {
-      state = state.copyWith(
-        error: 'Admin yetkileri kontrol edilemedi: $e',
-        isLoading: false,
-        isAdmin: false,
-      );
-    }
+    final isAdmin = _authService.isAdmin;
+    state = state.copyWith(isAdmin: isAdmin);
   }
 
   // Load dashboard data
@@ -115,7 +113,7 @@ class AdminDashboardNotifier extends StateNotifier<AdminDashboardState> {
       );
     } catch (e) {
       state = state.copyWith(
-        error: 'Dashboard verileri yüklenemedi: $e',
+        error: 'Cannot load dashboard data: $e',
         isLoading: false,
       );
     }
@@ -139,7 +137,7 @@ class AdminDashboardNotifier extends StateNotifier<AdminDashboardState> {
         endDate: endDate,
       );
     } catch (e) {
-      state = state.copyWith(error: 'Sistem istatistikleri yüklenemedi: $e');
+      state = state.copyWith(error: 'Cannot load system statistics: $e');
       return null;
     }
   }
@@ -240,7 +238,7 @@ class MerchantManagementNotifier
       state = state.copyWith(
         merchants: response.merchants,
         currentPage: response.page,
-        totalPages: response.totalPages,
+        totalPages: response.hasNext ? response.page + 1 : response.page,
         total: response.total,
         searchQuery: search,
         activeFilter: isActive,
@@ -248,7 +246,7 @@ class MerchantManagementNotifier
       );
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant listesi yüklenemedi: $e',
+        error: 'Cannot load merchant list: $e',
         isLoading: false,
       );
     }
@@ -262,7 +260,7 @@ class MerchantManagementNotifier
       state = state.copyWith(selectedMerchant: merchant, isLoading: false);
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant detayları yüklenemedi: $e',
+        error: 'Cannot load merchant details: $e',
         isLoading: false,
       );
     }
@@ -281,7 +279,7 @@ class MerchantManagementNotifier
       return true;
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant oluşturulamadı: $e',
+        error: 'Cannot create merchant: $e',
         isLoading: false,
       );
       return false;
@@ -315,7 +313,7 @@ class MerchantManagementNotifier
       return true;
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant güncellenemedi: $e',
+        error: 'Cannot update merchant: $e',
         isLoading: false,
       );
       return false;
@@ -343,7 +341,7 @@ class MerchantManagementNotifier
       return true;
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant silinemedi: $e',
+        error: 'Cannot delete merchant: $e',
         isLoading: false,
       );
       return false;
@@ -374,7 +372,7 @@ class MerchantManagementNotifier
       return true;
     } catch (e) {
       state = state.copyWith(
-        error: 'Merchant durumu değiştirilemedi: $e',
+        error: 'Cannot change merchant status: $e',
         isLoading: false,
       );
       return false;
@@ -402,7 +400,7 @@ class MerchantManagementNotifier
       return response.apiKey;
     } catch (e) {
       state = state.copyWith(
-        error: 'API anahtarı yenilenemedi: $e',
+        error: 'Cannot regenerate API key: $e',
         isLoading: false,
       );
       return null;

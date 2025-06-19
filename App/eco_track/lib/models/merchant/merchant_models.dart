@@ -8,15 +8,22 @@ part 'merchant_models.g.dart';
 class Merchant extends Equatable {
   final String id;
   final String name;
-  final String? description;
-  final String? address;
-  final String? phone;
-  final String? email;
-  final String? website;
+  @JsonKey(name: 'business_type')
+  final String? businessType;
   @JsonKey(name: 'api_key')
   final String? apiKey;
+  @JsonKey(name: 'webhook_url')
+  final String? webhookUrl;
   @JsonKey(name: 'is_active')
   final bool isActive;
+  @JsonKey(name: 'contact_email')
+  final String? contactEmail;
+  @JsonKey(name: 'contact_phone')
+  final String? contactPhone;
+  final String? address;
+  @JsonKey(name: 'tax_number')
+  final String? taxNumber;
+  final Map<String, dynamic>? settings;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -25,13 +32,15 @@ class Merchant extends Equatable {
   const Merchant({
     required this.id,
     required this.name,
-    this.description,
-    this.address,
-    this.phone,
-    this.email,
-    this.website,
+    this.businessType,
     this.apiKey,
+    this.webhookUrl,
     required this.isActive,
+    this.contactEmail,
+    this.contactPhone,
+    this.address,
+    this.taxNumber,
+    this.settings,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -45,13 +54,15 @@ class Merchant extends Equatable {
   List<Object?> get props => [
     id,
     name,
-    description,
-    address,
-    phone,
-    email,
-    website,
+    businessType,
     apiKey,
+    webhookUrl,
     isActive,
+    contactEmail,
+    contactPhone,
+    address,
+    taxNumber,
+    settings,
     createdAt,
     updatedAt,
   ];
@@ -59,26 +70,30 @@ class Merchant extends Equatable {
   Merchant copyWith({
     String? id,
     String? name,
-    String? description,
-    String? address,
-    String? phone,
-    String? email,
-    String? website,
+    String? businessType,
     String? apiKey,
+    String? webhookUrl,
     bool? isActive,
+    String? contactEmail,
+    String? contactPhone,
+    String? address,
+    String? taxNumber,
+    Map<String, dynamic>? settings,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Merchant(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description ?? this.description,
-      address: address ?? this.address,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      website: website ?? this.website,
+      businessType: businessType ?? this.businessType,
       apiKey: apiKey ?? this.apiKey,
+      webhookUrl: webhookUrl ?? this.webhookUrl,
       isActive: isActive ?? this.isActive,
+      contactEmail: contactEmail ?? this.contactEmail,
+      contactPhone: contactPhone ?? this.contactPhone,
+      address: address ?? this.address,
+      taxNumber: taxNumber ?? this.taxNumber,
+      settings: settings ?? this.settings,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -89,19 +104,28 @@ class Merchant extends Equatable {
 @JsonSerializable()
 class MerchantCreateRequest extends Equatable {
   final String name;
-  final String? description;
+  @JsonKey(name: 'business_type')
+  final String? businessType;
+  @JsonKey(name: 'webhook_url')
+  final String? webhookUrl;
+  @JsonKey(name: 'contact_email')
+  final String? contactEmail;
+  @JsonKey(name: 'contact_phone')
+  final String? contactPhone;
   final String? address;
-  final String? phone;
-  final String? email;
-  final String? website;
+  @JsonKey(name: 'tax_number')
+  final String? taxNumber;
+  final Map<String, dynamic>? settings;
 
   const MerchantCreateRequest({
     required this.name,
-    this.description,
+    this.businessType,
+    this.webhookUrl,
+    this.contactEmail,
+    this.contactPhone,
     this.address,
-    this.phone,
-    this.email,
-    this.website,
+    this.taxNumber,
+    this.settings,
   });
 
   factory MerchantCreateRequest.fromJson(Map<String, dynamic> json) =>
@@ -112,11 +136,13 @@ class MerchantCreateRequest extends Equatable {
   @override
   List<Object?> get props => [
     name,
-    description,
+    businessType,
+    webhookUrl,
+    contactEmail,
+    contactPhone,
     address,
-    phone,
-    email,
-    website,
+    taxNumber,
+    settings,
   ];
 }
 
@@ -124,21 +150,30 @@ class MerchantCreateRequest extends Equatable {
 @JsonSerializable()
 class MerchantUpdateRequest extends Equatable {
   final String? name;
-  final String? description;
+  @JsonKey(name: 'business_type')
+  final String? businessType;
+  @JsonKey(name: 'webhook_url')
+  final String? webhookUrl;
+  @JsonKey(name: 'contact_email')
+  final String? contactEmail;
+  @JsonKey(name: 'contact_phone')
+  final String? contactPhone;
   final String? address;
-  final String? phone;
-  final String? email;
-  final String? website;
+  @JsonKey(name: 'tax_number')
+  final String? taxNumber;
+  final Map<String, dynamic>? settings;
   @JsonKey(name: 'is_active')
   final bool? isActive;
 
   const MerchantUpdateRequest({
     this.name,
-    this.description,
+    this.businessType,
+    this.webhookUrl,
+    this.contactEmail,
+    this.contactPhone,
     this.address,
-    this.phone,
-    this.email,
-    this.website,
+    this.taxNumber,
+    this.settings,
     this.isActive,
   });
 
@@ -150,11 +185,13 @@ class MerchantUpdateRequest extends Equatable {
   @override
   List<Object?> get props => [
     name,
-    description,
+    businessType,
+    webhookUrl,
+    contactEmail,
+    contactPhone,
     address,
-    phone,
-    email,
-    website,
+    taxNumber,
+    settings,
     isActive,
   ];
 }
@@ -165,17 +202,16 @@ class MerchantListResponse extends Equatable {
   final List<Merchant> merchants;
   final int total;
   final int page;
-  @JsonKey(name: 'per_page')
-  final int perPage;
-  @JsonKey(name: 'total_pages')
-  final int totalPages;
+  final int size;
+  @JsonKey(name: 'has_next')
+  final bool hasNext;
 
   const MerchantListResponse({
     required this.merchants,
     required this.total,
     required this.page,
-    required this.perPage,
-    required this.totalPages,
+    required this.size,
+    required this.hasNext,
   });
 
   factory MerchantListResponse.fromJson(Map<String, dynamic> json) =>
@@ -184,7 +220,7 @@ class MerchantListResponse extends Equatable {
   Map<String, dynamic> toJson() => _$MerchantListResponseToJson(this);
 
   @override
-  List<Object?> get props => [merchants, total, page, perPage, totalPages];
+  List<Object?> get props => [merchants, total, page, size, hasNext];
 }
 
 // API Key Regeneration Response
@@ -192,13 +228,9 @@ class MerchantListResponse extends Equatable {
 class ApiKeyRegenerationResponse extends Equatable {
   @JsonKey(name: 'api_key')
   final String apiKey;
-  @JsonKey(name: 'regenerated_at')
-  final DateTime regeneratedAt;
+  final String? message;
 
-  const ApiKeyRegenerationResponse({
-    required this.apiKey,
-    required this.regeneratedAt,
-  });
+  const ApiKeyRegenerationResponse({required this.apiKey, this.message});
 
   factory ApiKeyRegenerationResponse.fromJson(Map<String, dynamic> json) =>
       _$ApiKeyRegenerationResponseFromJson(json);
@@ -206,5 +238,5 @@ class ApiKeyRegenerationResponse extends Equatable {
   Map<String, dynamic> toJson() => _$ApiKeyRegenerationResponseToJson(this);
 
   @override
-  List<Object?> get props => [apiKey, regeneratedAt];
+  List<Object?> get props => [apiKey, message];
 }

@@ -121,6 +121,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Login user with remember me support
+  Future<void> loginWithRememberMe({
+    required String email,
+    required String password,
+    bool rememberMe = false,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final response = await _authService.loginWithRememberMe(
+        email: email,
+        password: password,
+        rememberMe: rememberMe,
+      );
+
+      state = state.copyWith(
+        user: response.user,
+        isAuthenticated: true,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
   // Request password reset
   Future<void> requestPasswordReset(String email) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -235,6 +261,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Logout user
   Future<void> logout() async {
     await _authService.logout();
+    state = const AuthState(); // Reset to initial state
+  }
+
+  // Logout from all devices
+  Future<void> logoutFromAllDevices() async {
+    await _authService.logoutFromAllDevices();
     state = const AuthState(); // Reset to initial state
   }
 

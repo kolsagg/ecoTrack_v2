@@ -21,6 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -33,11 +34,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      await ref.read(authStateProvider.notifier).login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      
+      await ref
+          .read(authStateProvider.notifier)
+          .loginWithRememberMe(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            rememberMe: _rememberMe,
+          );
+
       if (mounted) {
         // Navigate to main app - this will be handled by the main app routing
         Navigator.of(context).pushReplacementNamed('/home');
@@ -80,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // App Logo/Title
                     Icon(
                       Icons.eco,
@@ -88,18 +92,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: AppConstants.primaryColor,
                     ),
                     const SizedBox(height: AppConstants.spacingSmall),
-                    
+
                     Text(
                       AppConstants.appName,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppConstants.primaryColor,
-                        fontWeight: AppConstants.fontWeightBold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: AppConstants.primaryColor,
+                            fontWeight: AppConstants.fontWeightBold,
+                          ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXSmall),
-                    
+
                     Text(
                       'Track your expenses, save the planet',
                       textAlign: TextAlign.center,
@@ -107,9 +112,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXLarge),
-                    
+
                     // Welcome Text
                     Text(
                       'Welcome Back',
@@ -118,18 +123,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         fontWeight: AppConstants.fontWeightSemiBold,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingXSmall),
-                    
+
                     Text(
                       'Sign in to continue to your account',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Email Field
                     CustomTextField(
                       controller: _emailController,
@@ -141,15 +146,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Password Field
                     CustomTextField(
                       controller: _passwordController,
@@ -159,7 +166,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: Icons.lock_outlined,
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: AppConstants.textSecondaryColor,
                         ),
                         onPressed: () {
@@ -178,41 +187,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingSmall),
-                    
-                    // Forgot Password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: AppConstants.primaryColor,
-                            fontWeight: AppConstants.fontWeightMedium,
+
+                    // Remember Me & Forgot Password Row
+                    Row(
+                      children: [
+                        // Remember Me Checkbox
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                          activeColor: AppConstants.primaryColor,
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _rememberMe = !_rememberMe;
+                            });
+                          },
+                          child: Text(
+                            'Remember Me',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppConstants.textPrimaryColor,
+                                ),
                           ),
                         ),
-                      ),
+                        const Spacer(),
+                        // Forgot Password
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Forgot Password?',
+                            style: TextStyle(
+                              color: AppConstants.primaryColor,
+                              fontWeight: AppConstants.fontWeightMedium,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Login Button
                     CustomButton(
                       text: 'Sign In',
                       onPressed: _handleLogin,
                       isLoading: isLoading,
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Divider
                     Row(
                       children: [
@@ -223,26 +260,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           child: Text(
                             'OR',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppConstants.textSecondaryColor,
+                                ),
                           ),
                         ),
                         const Expanded(child: Divider()),
                       ],
                     ),
-                    
+
                     const SizedBox(height: AppConstants.spacingLarge),
-                    
+
                     // Register Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           "Don't have an account? ",
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppConstants.textSecondaryColor,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
                         ),
                         TextButton(
                           onPressed: () {
@@ -271,4 +310,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-} 
+}

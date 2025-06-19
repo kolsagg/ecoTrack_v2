@@ -9,10 +9,17 @@ part of 'auth_models.dart';
 LoginRequest _$LoginRequestFromJson(Map<String, dynamic> json) => LoginRequest(
   email: json['email'] as String,
   password: json['password'] as String,
+  rememberMe: json['remember_me'] as bool?,
+  deviceInfo: json['device_info'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$LoginRequestToJson(LoginRequest instance) =>
-    <String, dynamic>{'email': instance.email, 'password': instance.password};
+    <String, dynamic>{
+      'email': instance.email,
+      'password': instance.password,
+      'remember_me': instance.rememberMe,
+      'device_info': instance.deviceInfo,
+    };
 
 RegisterRequest _$RegisterRequestFromJson(Map<String, dynamic> json) =>
     RegisterRequest(
@@ -46,6 +53,8 @@ AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
   refreshToken: json['refresh_token'] as String?,
   tokenType: json['token_type'] as String,
   expiresIn: (json['expires_in'] as num?)?.toInt(),
+  rememberToken: json['remember_token'] as String?,
+  rememberExpiresIn: (json['remember_expires_in'] as num?)?.toInt(),
   user: User.fromJson(json['user'] as Map<String, dynamic>),
 );
 
@@ -55,6 +64,8 @@ Map<String, dynamic> _$AuthResponseToJson(AuthResponse instance) =>
       'refresh_token': instance.refreshToken,
       'token_type': instance.tokenType,
       'expires_in': instance.expiresIn,
+      'remember_token': instance.rememberToken,
+      'remember_expires_in': instance.rememberExpiresIn,
       'user': instance.user,
     };
 
@@ -165,4 +176,20 @@ Map<String, dynamic> _$ProfileUpdateRequestToJson(
   'first_name': instance.firstName,
   'last_name': instance.lastName,
   'email': instance.email,
+};
+
+RememberMeLoginRequest _$RememberMeLoginRequestFromJson(
+  Map<String, dynamic> json,
+) => RememberMeLoginRequest(
+  rememberToken: json['remember_token'] as String,
+  deviceId: json['device_id'] as String,
+  deviceInfo: json['device_info'] as Map<String, dynamic>,
+);
+
+Map<String, dynamic> _$RememberMeLoginRequestToJson(
+  RememberMeLoginRequest instance,
+) => <String, dynamic>{
+  'remember_token': instance.rememberToken,
+  'device_id': instance.deviceId,
+  'device_info': instance.deviceInfo,
 };

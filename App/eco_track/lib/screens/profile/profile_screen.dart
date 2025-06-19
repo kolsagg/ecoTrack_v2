@@ -339,7 +339,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   const SizedBox(height: AppConstants.spacingMedium),
 
-                  // Logout Button
+                  // Logout Buttons
                   SizedBox(
                     width: double.infinity,
                     child: CustomButton(
@@ -349,6 +349,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       },
                       isOutlined: true,
                       icon: Icons.logout,
+                    ),
+                  ),
+
+                  const SizedBox(height: AppConstants.spacingSmall),
+
+                  // Logout from all devices button
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      text: 'Log Out from All Devices',
+                      onPressed: () async {
+                        // Onay dialogu göster
+                        final shouldLogout = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Log Out from All Devices'),
+                            content: const Text(
+                              'Are you sure you want to log out from all devices? '
+                              'This will terminate your sessions on other devices.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text('Log Out'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldLogout == true) {
+                          await ref
+                              .read(authStateProvider.notifier)
+                              .logoutFromAllDevices();
+                        }
+                      },
+                      isOutlined: true,
+                      icon: Icons.logout_outlined,
                     ),
                   ),
                 ],

@@ -52,7 +52,7 @@ class MerchantSearchNotifier extends StateNotifier<MerchantSearchState> {
       final response = await _merchantService.getMerchants(
         search: query,
         isActive: true, // Only active merchants
-        perPage: 10, // Limit results for autocomplete
+        size: 10, // Limit results for autocomplete
       );
 
       state = state.copyWith(merchants: response.merchants, isLoading: false);
@@ -111,7 +111,7 @@ class PopularMerchantsNotifier extends StateNotifier<PopularMerchantsState> {
 
       final response = await _merchantService.getMerchants(
         isActive: true,
-        perPage: 20, // Get top 20 popular merchants
+        size: 20, // Get top 20 popular merchants
       );
 
       state = state.copyWith(merchants: response.merchants, isLoading: false);

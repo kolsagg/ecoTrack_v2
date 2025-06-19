@@ -1,4 +1,11 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class DeviceInfo(BaseModel):
+    device_id: str
+    device_type: str  # 'ios', 'android', 'web'
+    device_name: Optional[str] = None
+    user_agent: Optional[str] = None
 
 class UserSignUp(BaseModel):
     email: EmailStr
@@ -8,4 +15,6 @@ class UserSignUp(BaseModel):
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str 
+    password: str
+    remember_me: bool = False
+    device_info: Optional[DeviceInfo] = None 

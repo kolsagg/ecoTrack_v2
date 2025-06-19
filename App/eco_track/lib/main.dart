@@ -8,6 +8,7 @@ import 'core/utils/dependency_injection.dart';
 import 'providers/auth_provider.dart';
 import 'routes/app_routes.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'widgets/navigation/main_navigation.dart';
 
 void main() async {
@@ -65,9 +66,9 @@ class AuthWrapper extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
 
-    // Show loading screen while checking authentication
+    // Show splash screen while checking authentication
     if (authState.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const SplashScreen();
     }
 
     // Show main navigation if authenticated, login screen if not

@@ -32,6 +32,53 @@ class StorageService {
     await _secureStorage.delete(key: AppConfig.userDataKey);
   }
 
+  // Remember token operations
+  Future<void> saveRememberToken(String token) async {
+    await _secureStorage.write(key: AppConfig.rememberTokenKey, value: token);
+  }
+
+  Future<String?> getRememberToken() async {
+    return await _secureStorage.read(key: AppConfig.rememberTokenKey);
+  }
+
+  Future<void> deleteRememberToken() async {
+    await _secureStorage.delete(key: AppConfig.rememberTokenKey);
+  }
+
+  // Remember token expiry operations
+  Future<void> saveRememberTokenExpiry(DateTime expiry) async {
+    await _secureStorage.write(
+      key: AppConfig.rememberTokenExpiryKey,
+      value: expiry.toIso8601String(),
+    );
+  }
+
+  Future<DateTime?> getRememberTokenExpiry() async {
+    final expiryString = await _secureStorage.read(
+      key: AppConfig.rememberTokenExpiryKey,
+    );
+    if (expiryString != null) {
+      return DateTime.parse(expiryString);
+    }
+    return null;
+  }
+
+  Future<void> deleteRememberTokenExpiry() async {
+    await _secureStorage.delete(key: AppConfig.rememberTokenExpiryKey);
+  }
+
+  // Check if remember token is valid
+  Future<bool> isRememberTokenValid() async {
+    final token = await getRememberToken();
+    final expiry = await getRememberTokenExpiry();
+
+    if (token == null || expiry == null) {
+      return false;
+    }
+
+    return DateTime.now().isBefore(expiry);
+  }
+
   // Theme operations
   Future<void> saveThemeMode(String themeMode) async {
     await _secureStorage.write(key: AppConfig.themeKey, value: themeMode);

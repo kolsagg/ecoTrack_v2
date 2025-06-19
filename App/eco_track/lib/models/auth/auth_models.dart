@@ -9,15 +9,24 @@ part 'auth_models.g.dart';
 class LoginRequest extends Equatable {
   final String email;
   final String password;
+  @JsonKey(name: 'remember_me')
+  final bool? rememberMe;
+  @JsonKey(name: 'device_info')
+  final Map<String, dynamic>? deviceInfo;
 
-  const LoginRequest({required this.email, required this.password});
+  const LoginRequest({
+    required this.email,
+    required this.password,
+    this.rememberMe,
+    this.deviceInfo,
+  });
 
   factory LoginRequest.fromJson(Map<String, dynamic> json) =>
       _$LoginRequestFromJson(json);
   Map<String, dynamic> toJson() => _$LoginRequestToJson(this);
 
   @override
-  List<Object> get props => [email, password];
+  List<Object?> get props => [email, password, rememberMe, deviceInfo];
 }
 
 // Register Request
@@ -73,6 +82,10 @@ class AuthResponse extends Equatable {
   final String tokenType;
   @JsonKey(name: 'expires_in')
   final int? expiresIn;
+  @JsonKey(name: 'remember_token')
+  final String? rememberToken;
+  @JsonKey(name: 'remember_expires_in')
+  final int? rememberExpiresIn;
   final User user;
 
   const AuthResponse({
@@ -80,6 +93,8 @@ class AuthResponse extends Equatable {
     this.refreshToken,
     required this.tokenType,
     this.expiresIn,
+    this.rememberToken,
+    this.rememberExpiresIn,
     required this.user,
   });
 
@@ -93,6 +108,8 @@ class AuthResponse extends Equatable {
     refreshToken,
     tokenType,
     expiresIn,
+    rememberToken,
+    rememberExpiresIn,
     user,
   ];
 }
@@ -273,4 +290,28 @@ class ProfileUpdateRequest extends Equatable {
 
   @override
   List<Object?> get props => [firstName, lastName, email];
+}
+
+// Remember Me Login Request
+@JsonSerializable()
+class RememberMeLoginRequest extends Equatable {
+  @JsonKey(name: 'remember_token')
+  final String rememberToken;
+  @JsonKey(name: 'device_id')
+  final String deviceId;
+  @JsonKey(name: 'device_info')
+  final Map<String, dynamic> deviceInfo;
+
+  const RememberMeLoginRequest({
+    required this.rememberToken,
+    required this.deviceId,
+    required this.deviceInfo,
+  });
+
+  factory RememberMeLoginRequest.fromJson(Map<String, dynamic> json) =>
+      _$RememberMeLoginRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$RememberMeLoginRequestToJson(this);
+
+  @override
+  List<Object> get props => [rememberToken, deviceId, deviceInfo];
 }
