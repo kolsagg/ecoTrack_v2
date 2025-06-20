@@ -56,7 +56,8 @@ async def scan_qr_receipt(
                         total_amount=receipt["total_amount"],
                         currency=receipt["currency"],
                         expenses_count=expenses_count,
-                        processing_confidence=1.0  # Perfect match for our own QR
+                        processing_confidence=1.0,  # Perfect match for our own QR
+                        public_url=None  # User owns this receipt, no public URL needed
                     )
                 else:
                     # Receipt exists but belongs to someone else
@@ -126,7 +127,8 @@ async def scan_qr_receipt(
             total_amount=receipt_data.get("total_amount"),
             currency=receipt_data.get("currency", "TRY"),
             expenses_count=items_created,
-            processing_confidence=0.8  # Default confidence for QR processing
+            processing_confidence=0.8,  # Default confidence for QR processing
+            public_url=None  # New receipt, no public URL yet
         )
         
     except HTTPException:
@@ -152,8 +154,8 @@ async def list_receipts(
     List user's receipts with filtering, pagination and sorting
     """
     try:
-        # Build query (RLS will automatically filter by user_id)
-        query = supabase.table("receipts").select("*")
+        # Build query with explicit user_id filter (don't rely only on RLS)
+        query = supabase.table("receipts").select("*").eq("user_id", current_user["id"])
         
         # Apply filters
         if merchant:
