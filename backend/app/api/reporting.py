@@ -223,17 +223,17 @@ async def get_budget_vs_actual(
             actual_data.append(actual_spending.get(category_id, 0.0))
         
         return {
-            "reportTitle": f"{MONTH_NAMES[month]} {year} Bütçe vs. Harcama",
+            "reportTitle": f"{MONTH_NAMES[month]} {year} Budget vs. Actual",
             "chartType": "bar",
             "labels": labels,
             "datasets": [
                 {
-                    "label": "Bütçe",
+                    "label": "Budget",
                     "color": "#4CAF50",
                     "data": budget_data
                 },
                 {
-                    "label": "Gerçekleşen",
+                    "label": "Actual",
                     "color": "#F44336",
                     "data": actual_data
                 }
@@ -253,17 +253,17 @@ async def get_spending_trends(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    **C. Çizgi Grafik Yanıtı**
+    **C. Line Chart Response**
     
     Returns spending trends in the exact format specified:
     ```json
     {
-      "reportTitle": "Son 6 Aylık Harcama Trendi",
+      "reportTitle": "Last 6 Months Spending Trends",
       "chartType": "line",
-      "xAxisLabels": { "0": "Oca", "1": "Şub", "2": "Mar", "3": "Nis", "4": "May", "5": "Haz" },
+      "xAxisLabels": { "0": "Jan", "1": "Feb", "2": "Mar", "3": "Apr", "4": "May", "5": "Jun" },
       "datasets": [
         {
-          "label": "Harcama", "color": "#03A9F4",
+          "label": "Spending", "color": "#03A9F4",
           "data": [
             { "x": 0, "y": 2450.75 }, { "x": 1, "y": 2325.25 },
             { "x": 2, "y": 2600.00 }, { "x": 3, "y": 2550.50 },
@@ -289,28 +289,28 @@ async def get_spending_trends(
             start_date = current_month
             for _ in range(2):  # 2 ay geriye git (toplam 3 ay olacak)
                 start_date = (start_date - timedelta(days=1)).replace(day=1)
-            title = "Son 3 Aylık Harcama Trendi"
+            title = "Last 3 Months Spending Trends"
         elif period == PeriodType.SIX_MONTHS:
             # Son 6 ay (şu anki ay dahil)
             current_month = end_date.replace(day=1)
             start_date = current_month
             for _ in range(5):  # 5 ay geriye git (toplam 6 ay olacak)
                 start_date = (start_date - timedelta(days=1)).replace(day=1)
-            title = "Son 6 Aylık Harcama Trendi"
+            title = "Last 6 Months Spending Trends"
         elif period == PeriodType.ONE_YEAR:
             # Son 12 ay (şu anki ay dahil)
             current_month = end_date.replace(day=1)
             start_date = current_month
             for _ in range(11):  # 11 ay geriye git (toplam 12 ay olacak)
                 start_date = (start_date - timedelta(days=1)).replace(day=1)
-            title = "Son 12 Aylık Harcama Trendi"
+            title = "Last 1 Year Spending Trends"
         else:
             # Default: Son 6 ay
             current_month = end_date.replace(day=1)
             start_date = current_month
             for _ in range(5):  # 5 ay geriye git (toplam 6 ay olacak)
                 start_date = (start_date - timedelta(days=1)).replace(day=1)
-            title = "Son 6 Aylık Harcama Trendi"
+            title = "Last 6 Months Spending Trends"
         
         # Get expense data
         query = supabase.table("expenses").select(
@@ -367,7 +367,7 @@ async def get_spending_trends(
             "xAxisLabels": x_axis_labels,
             "datasets": [
                 {
-                    "label": "Aylık Harcama",
+                    "label": "Monthly Spending",
                     "color": "#03A9F4",
                     "data": data_points
                 }

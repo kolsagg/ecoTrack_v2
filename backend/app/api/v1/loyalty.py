@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 
 from app.auth.dependencies import get_current_user
-from app.schemas.loyalty import LoyaltyStatusResponse, PointsCalculationResult
+from app.schemas.loyalty import LoyaltyStatusResponse
 from app.services.loyalty_service import LoyaltyService
 
 router = APIRouter()
@@ -27,28 +27,6 @@ async def get_loyalty_status(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get loyalty status: {str(e)}")
 
-@router.get("/calculate-points", response_model=PointsCalculationResult)
-async def calculate_points(
-    amount: float = Query(..., gt=0, description="Expense amount"),
-    category: Optional[str] = Query(None, description="Expense category"),
-    merchant_name: Optional[str] = Query(None, description="Merchant name"),
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Calculate loyalty points for a given expense amount
-    Useful for showing users how many points they would earn
-    """
-    try:
-        result = await loyalty_service.calculate_points_for_expense(
-            user_id=current_user["id"],
-            amount=amount,
-            category=category,
-            merchant_name=merchant_name
-        )
-        return result
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to calculate points: {str(e)}")
 
 @router.get("/history")
 async def get_loyalty_history(

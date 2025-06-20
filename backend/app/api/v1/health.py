@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/health")
 async def health_check() -> Dict[str, Any]:
     """
-    Temel sistem sağlık kontrolü
+    Basic system health check
     """
     return {
         "status": "healthy",
@@ -22,7 +22,7 @@ async def health_check() -> Dict[str, Any]:
 @router.get("/health/detailed")
 async def detailed_health_check() -> Dict[str, Any]:
     """
-    Detaylı sistem sağlık kontrolü
+    Detailed system health check
     """
     health_status = {
         "status": "healthy",
@@ -65,7 +65,7 @@ async def detailed_health_check() -> Dict[str, Any]:
 @router.get("/health/database")
 async def database_health_check() -> Dict[str, Any]:
     """
-    Veritabanı sağlık kontrolü
+    Database health check
     """
     try:
         start_time = time.time()
@@ -82,7 +82,7 @@ async def database_health_check() -> Dict[str, Any]:
         table_names = ["users", "categories", "receipts", "expenses", "merchants"]
         for table in table_names:
             try:
-                count_result = supabase.table(table).select("id", count="exact").execute()
+                count_result = supabase.table(table).select("id", count="exact").execute()  # type: ignore
                 tables_info[table] = count_result.count if hasattr(count_result, 'count') else 0
             except Exception as e:
                 tables_info[table] = f"Error: {str(e)}"
@@ -106,27 +106,27 @@ async def database_health_check() -> Dict[str, Any]:
 @router.get("/health/metrics")
 async def system_metrics(current_user = Depends(get_current_user)) -> Dict[str, Any]:
     """
-    Sistem metrikleri (yetkilendirilmiş kullanıcılar için)
+    System metrics (for authorized users)
     """
     try:
         supabase = settings.supabase_admin
         
         # Kullanıcı istatistikleri
-        users_count = supabase.table("users").select("id", count="exact").execute()
+        users_count = supabase.table("users").select("id", count="exact").execute()  # type: ignore
         
         # Harcama istatistikleri
-        expenses_count = supabase.table("expenses").select("id", count="exact").execute()
+        expenses_count = supabase.table("expenses").select("id", count="exact").execute()  # type: ignore
         
         # Fiş istatistikleri
-        receipts_count = supabase.table("receipts").select("id", count="exact").execute()
+        receipts_count = supabase.table("receipts").select("id", count="exact").execute()  # type: ignore
         
         # Merchant istatistikleri
-        merchants_count = supabase.table("merchants").select("id", count="exact").execute()
+        merchants_count = supabase.table("merchants").select("id", count="exact").execute()  # type: ignore
         
         # Son 24 saat içindeki aktivite
         yesterday = datetime.utcnow() - timedelta(days=1)
-        recent_expenses = supabase.table("expenses").select("id", count="exact").gte("created_at", yesterday.isoformat()).execute()
-        recent_receipts = supabase.table("receipts").select("id", count="exact").gte("created_at", yesterday.isoformat()).execute()
+        recent_expenses = supabase.table("expenses").select("id", count="exact").gte("created_at", yesterday.isoformat()).execute()  # type: ignore
+        recent_receipts = supabase.table("receipts").select("id", count="exact").gte("created_at", yesterday.isoformat()).execute()  # type: ignore
         
         return {
             "timestamp": datetime.utcnow().isoformat(),

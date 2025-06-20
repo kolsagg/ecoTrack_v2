@@ -35,8 +35,8 @@ class ReportingService:
         
         # Turkish month names for labels
         self.month_names = {
-            1: "Oca", 2: "Şub", 3: "Mar", 4: "Nis", 5: "May", 6: "Haz",
-            7: "Tem", 8: "Ağu", 9: "Eyl", 10: "Eki", 11: "Kas", 12: "Ara"
+            1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+            7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
         }
     
     async def get_monthly_category_distribution(
@@ -47,7 +47,7 @@ class ReportingService:
         chart_type: ChartType = ChartType.PIE
     ) -> Dict[str, Any]:
         """
-        A. Pasta/Donut Grafik - Aylık Kategori Dağılımı
+        A. Pie/Donut Graph - Monthly Category Distribution
         """
         try:
             # Calculate date range for the month
@@ -74,9 +74,9 @@ class ReportingService:
             for expense in result.data:
                 expense_items = expense.get("expense_items", [])
                 for item in expense_items:
-                    category_name = "Diğer"
+                    category_name = "Other"
                     if item.get("categories"):
-                        category_name = item["categories"].get("name", "Diğer")
+                        category_name = item["categories"].get("name", "Other")
                     
                     amount = float(item.get("amount", 0))
                     category_totals[category_name] += amount
@@ -94,7 +94,7 @@ class ReportingService:
                 ))
             
             return PieChartResponse(
-                reportTitle=f"{self.month_names[month]} {year} Kategori Dağılımı",
+                reportTitle=f"{self.month_names[month]} {year} Category Distribution",
                 totalAmount=round(total_amount, 2),
                 chartType=chart_type.value,
                 data=chart_data
@@ -110,7 +110,7 @@ class ReportingService:
         month: int
     ) -> Dict[str, Any]:
         """
-        B. Çubuk Grafik - Bütçe vs. Harcama
+        B. Bar Chart - Budget vs. Actual
         """
         try:
             # Get user's category budgets
@@ -156,19 +156,19 @@ class ReportingService:
             
             datasets = [
                 BarChartDataset(
-                    label="Bütçe",
+                    label="Budget",
                     color="#4CAF50",
                     data=budget_data
                 ),
                 BarChartDataset(
-                    label="Gerçekleşen",
+                    label="Actual",
                     color="#F44336",
                     data=actual_data
                 )
             ]
             
             return BarChartResponse(
-                reportTitle=f"{self.month_names[month]} {year} Bütçe vs. Harcama",
+                reportTitle=f"{self.month_names[month]} {year} Budget vs. Actual",
                 chartType="bar",
                 labels=labels,
                 datasets=datasets
@@ -183,7 +183,7 @@ class ReportingService:
         period: PeriodType
     ) -> Dict[str, Any]:
         """
-        C. Çizgi Grafik - Harcama Trendi
+        C. Line Chart - Spending Trends
         """
         try:
             # Calculate date range based on period
@@ -191,19 +191,19 @@ class ReportingService:
             
             if period == PeriodType.THIS_MONTH:
                 start_date = end_date.replace(day=1)
-                title = f"{self.month_names[end_date.month]} {end_date.year} Günlük Harcama Trendi"
+                title = f"{self.month_names[end_date.month]} {end_date.year} Daily Spending Trends"
             elif period == PeriodType.THREE_MONTHS:
                 start_date = end_date - timedelta(days=90)
-                title = "Son 3 Aylık Harcama Trendi"
+                title = "Last 3 Months Spending Trends"
             elif period == PeriodType.SIX_MONTHS:
                 start_date = end_date - timedelta(days=180)
-                title = "Son 6 Aylık Harcama Trendi"
+                title = "Last 6 Months Spending Trends"
             elif period == PeriodType.ONE_YEAR:
                 start_date = end_date - timedelta(days=365)
-                title = "Son 1 Yıllık Harcama Trendi"
+                title = "Last 1 Year Spending Trends"
             else:
                 start_date = end_date - timedelta(days=180)
-                title = "Son 6 Aylık Harcama Trendi"
+                title = "Last 6 Months Spending Trends"
             
             # Get expense data
             query = self.supabase.table("expenses").select(
@@ -226,7 +226,7 @@ class ReportingService:
     
     async def get_dashboard_summary(self, user_id: str) -> Dict[str, Any]:
         """
-        Dashboard özet verileri
+        Dashboard summary data
         """
         try:
             # Get current and previous month data
@@ -271,12 +271,12 @@ class ReportingService:
             for expense in category_result.data or []:
                 expense_items = expense.get("expense_items", [])
                 for item in expense_items:
-                    category_name = "Diğer"
+                    category_name = "Other"
                     if item.get("categories"):
-                        category_name = item["categories"].get("name", "Diğer")
+                        category_name = item["categories"].get("name", "Other")
                     category_totals[category_name] += float(item.get("amount", 0))
             
-            top_category = max(category_totals.items(), key=lambda x: x[1]) if category_totals else ("Veri Yok", 0)
+            top_category = max(category_totals.items(), key=lambda x: x[1]) if category_totals else ("No Data", 0)
             
             # Create summary
             summary = DashboardSummary(
@@ -329,7 +329,7 @@ class ReportingService:
             x_index += 1
         
         dataset = LineChartDataset(
-            label="Günlük Harcama",
+            label="Daily Spending",
             color="#03A9F4",
             data=data_points
         )
@@ -372,7 +372,7 @@ class ReportingService:
             x_index += 1
         
         dataset = LineChartDataset(
-            label="Aylık Harcama",
+            label="Monthly Spending",
             color="#03A9F4",
             data=data_points
         )
@@ -423,7 +423,7 @@ class ReportingService:
     def _empty_pie_chart_response(self, year: int, month: int, chart_type: ChartType) -> Dict[str, Any]:
         """Return empty pie chart response"""
         return PieChartResponse(
-            reportTitle=f"{self.month_names[month]} {year} Kategori Dağılımı",
+            reportTitle=f"{self.month_names[month]} {year} Category Distribution",
             totalAmount=0.0,
             chartType=chart_type.value,
             data=[]

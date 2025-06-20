@@ -31,7 +31,7 @@ async def register_device(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    Kullanıcının cihazını ve FCM token'ını kaydet
+    Register a device for a user and save the FCM token
     """
     try:
         # Mevcut kullanıcıyı al
@@ -94,7 +94,7 @@ async def get_user_devices(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    Kullanıcının kayıtlı cihazlarını listele
+    List the user's registered devices
     """
     try:
         user = supabase.auth.get_user()
@@ -119,7 +119,7 @@ async def deactivate_device(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    Cihazı deaktif et (FCM token'ını geçersiz kıl)
+    Deactivate the device (invalidate the FCM token)
     """
     try:
         user = supabase.auth.get_user()
@@ -148,7 +148,7 @@ async def delete_device(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    Cihazı tamamen sil
+    Delete the device completely
     """
     try:
         user = supabase.auth.get_user()

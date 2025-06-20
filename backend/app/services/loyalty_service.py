@@ -31,7 +31,7 @@ class LoyaltyService:
         }
         
         # Points calculation rules
-        self.base_points_per_lira = 1  # 1 point per 1 TRY spent
+        self.base_points_per_lira = 0.1  # 1 point per 10 TRY spent
         self.level_multipliers = {
             LoyaltyLevel.BRONZE: 1.0,
             LoyaltyLevel.SILVER: 1.2,
@@ -68,13 +68,16 @@ class LoyaltyService:
             next_level = self._get_next_level(current_level)
             points_to_next = self._calculate_points_to_next_level(loyalty_data["points"], next_level)
             
+            # Handle last_updated datetime parsing safely
+            last_updated = self._safe_parse_datetime(loyalty_data["last_updated"])
+            
             return LoyaltyStatusResponse(
                 user_id=user_id,
                 points=loyalty_data["points"],
                 level=current_level,
                 points_to_next_level=points_to_next,
                 next_level=next_level,
-                last_updated=datetime.fromisoformat(loyalty_data["last_updated"].replace('Z', '+00:00'))
+                last_updated=last_updated
             )
             
         except Exception as e:
@@ -187,7 +190,7 @@ class LoyaltyService:
             update_data = {
                 "points": new_total_points,
                 "level": new_level.value if new_level else None,
-                "last_updated": datetime.now().isoformat()
+                "last_updated": self._format_datetime_for_db()
             }
             
             result = self.service_supabase.table("loyalty_status").update(update_data).eq("user_id", user_id).execute()
@@ -196,7 +199,27 @@ class LoyaltyService:
                 logger.error(f"Failed to update loyalty status for user {user_id}")
                 raise Exception("Failed to update loyalty status")
             
-            # Log the transaction (you might want to create a separate table for this)
+            # Create loyalty transaction record
+            transaction_data = {
+                "user_id": user_id,
+                "expense_id": expense_id,
+                "points_earned": points_result.total_points,
+                "transaction_amount": amount,
+                "merchant_name": merchant_name,
+                "category": category,
+                "calculation_details": points_result.calculation_details,
+                "transaction_type": "expense",
+                "created_at": self._format_datetime_for_db()
+            }
+            
+            transaction_result = self.service_supabase.table("loyalty_transactions").insert(transaction_data).execute()
+            
+            if not transaction_result.data:
+                logger.warning(f"Failed to create loyalty transaction record for user {user_id}")
+                # Don't fail the entire operation, just log warning
+            else:
+                logger.info(f"Created loyalty transaction record: {transaction_result.data[0]['id']}")
+            
             logger.info(f"Points awarded: {points_result.total_points}, New total: {new_total_points}, Level: {new_level}")
             
             return {
@@ -207,7 +230,8 @@ class LoyaltyService:
                 "previous_level": current_status.level,
                 "new_level": new_level,
                 "level_changed": level_changed,
-                "calculation_details": points_result.calculation_details
+                "calculation_details": points_result.calculation_details,
+                "transaction_id": transaction_result.data[0]["id"] if transaction_result.data else None
             }
             
         except Exception as e:
@@ -216,7 +240,7 @@ class LoyaltyService:
 
     async def get_user_loyalty_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Get user's loyalty points history (from expenses)
+        Get user's loyalty points history from loyalty_transactions table
         
         Args:
             user_id: User ID
@@ -226,41 +250,112 @@ class LoyaltyService:
             List of loyalty transactions
         """
         try:
-            logger.info(f"Getting loyalty history for user {user_id}")
+            logger.info(f"Getting loyalty history for user {user_id}, limit: {limit}")
             
-            # Get recent expenses with loyalty points information
-            # This is a simplified version - you might want to create a separate loyalty_transactions table
-            result = self.supabase.table("expenses").select(
-                "id, total_amount, expense_date, notes, receipts(merchant_name)"
-            ).eq("user_id", user_id).order("expense_date", desc=True).limit(limit).execute()
+            # Try with service client first to bypass RLS for debugging
+            result = self.service_supabase.table("loyalty_transactions").select(
+                "*"
+            ).eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
+            
+            logger.info(f"Raw Supabase result: {result}")
+            logger.info(f"Result data: {result.data}")
+            logger.info(f"Result count: {result.count}")
             
             if not result.data:
+                logger.warning(f"No loyalty transactions found for user {user_id}")
                 return []
             
+            logger.info(f"Found {len(result.data)} transactions for user {user_id}")
+            
             history = []
-            for expense in result.data:
-                # Calculate what points would have been earned (simplified)
-                amount = float(expense.get("total_amount", 0))
-                base_points = int(amount * self.base_points_per_lira)
+            for transaction in result.data:
+                logger.debug(f"Processing transaction: {transaction}")
                 
-                merchant_name = None
-                if expense.get("receipts"):
-                    merchant_name = expense["receipts"].get("merchant_name")
+                # Parse created_at safely
+                created_at = self._safe_parse_datetime(transaction["created_at"])
                 
                 history.append({
-                    "expense_id": expense["id"],
-                    "amount": amount,
-                    "estimated_points": base_points,
-                    "merchant_name": merchant_name,
-                    "date": expense["expense_date"],
-                    "notes": expense.get("notes")
+                    "id": transaction["id"],
+                    "expense_id": transaction["expense_id"],
+                    "points_earned": transaction["points_earned"],
+                    "transaction_amount": float(transaction["transaction_amount"]),
+                    "merchant_name": transaction.get("merchant_name"),
+                    "category": transaction.get("category"),
+                    "transaction_type": transaction["transaction_type"],
+                    "calculation_details": transaction.get("calculation_details", {}),
+                    "created_at": created_at.isoformat(),
+                    "date": created_at.strftime("%Y-%m-%d")  # For backward compatibility
                 })
             
+            logger.info(f"Returning {len(history)} transactions in history")
             return history
             
         except Exception as e:
             logger.error(f"Failed to get loyalty history: {str(e)}")
+            logger.exception("Full exception details:")
             return []
+
+    def _safe_parse_datetime(self, datetime_str: Any) -> datetime:
+        """
+        Safely parse datetime from various formats
+        
+        Args:
+            datetime_str: Datetime string or object from database
+            
+        Returns:
+            datetime object
+        """
+        if isinstance(datetime_str, datetime):
+            return datetime_str
+        
+        if not isinstance(datetime_str, str):
+            logger.warning(f"Unexpected datetime type: {type(datetime_str)}, using current time")
+            return datetime.now()
+        
+        try:
+            # Handle Supabase datetime formats
+            working_str = datetime_str
+            
+            # Convert Z to timezone offset
+            if working_str.endswith('Z'):
+                working_str = working_str.replace('Z', '+00:00')
+            elif '+' not in working_str and 'T' in working_str:
+                working_str = working_str + '+00:00'
+            
+            # Fix microsecond precision issues
+            # Python fromisoformat expects max 6 digits for microseconds
+            if '.' in working_str and ('+' in working_str or '-' in working_str):
+                # Split by timezone part (+ or -)
+                if '+' in working_str:
+                    date_part, tz_part = working_str.rsplit('+', 1)
+                    tz_prefix = '+'
+                else:
+                    date_part, tz_part = working_str.rsplit('-', 1)
+                    tz_prefix = '-'
+                
+                if '.' in date_part:
+                    main_part, micro_part = date_part.rsplit('.', 1)
+                    # Ensure microseconds are exactly 6 digits
+                    if len(micro_part) > 6:
+                        micro_part = micro_part[:6]
+                    elif len(micro_part) < 6:
+                        micro_part = micro_part.ljust(6, '0')
+                    working_str = f"{main_part}.{micro_part}{tz_prefix}{tz_part}"
+            
+            return datetime.fromisoformat(working_str)
+            
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"✗ Failed to parse datetime '{datetime_str}': {e}, using current time")
+            return datetime.now()
+    
+    def _format_datetime_for_db(self) -> str:
+        """
+        Format current datetime for database storage
+        
+        Returns:
+            ISO formatted datetime string with Z suffix
+        """
+        return datetime.now().replace(microsecond=0).isoformat() + 'Z'
 
     async def _get_or_create_loyalty_status(self, user_id: str) -> Dict[str, Any]:
         """Get existing loyalty status or create new one using service role"""
@@ -276,7 +371,7 @@ class LoyaltyService:
                 "user_id": user_id,
                 "points": 0,
                 "level": LoyaltyLevel.BRONZE.value,
-                "last_updated": datetime.now().isoformat()
+                "last_updated": self._format_datetime_for_db()
             }
             
             create_result = self.service_supabase.table("loyalty_status").insert(new_status).execute()

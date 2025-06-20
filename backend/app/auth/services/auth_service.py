@@ -1,13 +1,26 @@
+"""
+Authentication service module for handling user authentication operations.
+
+This module provides the AuthService class which handles user sign up, login,
+logout, token management, and remember me functionality using Supabase Auth.
+"""
+import hashlib
+import secrets
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+
 from fastapi import HTTPException, status, Request
+
 from app.core.config import settings
 from app.auth.schemas.requests import UserSignUp, UserLogin
-import secrets
-import hashlib
-from datetime import datetime, timedelta
-import uuid
 
 class AuthService:
+    """
+    Authentication service for handling user authentication operations.
+    
+    This service provides methods for user registration, login, logout,
+    token management, and remember me functionality using Supabase Auth.
+    """
     def __init__(self):
         self.client = settings.supabase
         self.admin_client = settings.supabase_admin
@@ -36,7 +49,10 @@ class AuthService:
                 )
 
             return {
-                "message": "User registered successfully. Please check your email for verification.",
+                "message": (
+                    "User registered successfully. "
+                    "Please check your email for verification."
+                ),
                 "user": {
                     "id": auth_response.user.id,
                     "email": user_data.email,
@@ -49,9 +65,13 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)
-            )
-        
-    async def login(self, credentials: UserLogin, request: Request = None) -> Dict[str, Any]:
+            ) from e
+
+    async def login(
+        self,
+        credentials: UserLogin,
+        request: Optional[Request] = None
+    ) -> Dict[str, Any]:
         """
         Login user with email and password, with remember me support.
         """
@@ -68,7 +88,12 @@ class AuthService:
                 )
 
             # Get user profile
-            profile_response = self.client.table("users").select("*").eq("id", auth_response.user.id).execute()
+            profile_response = (
+                self.client.table("users")
+                .select("*")
+                .eq("id", auth_response.user.id)
+                .execute()
+            )
 
             if not profile_response.data:
                 raise HTTPException(
@@ -78,8 +103,8 @@ class AuthService:
 
             user_data = profile_response.data[0]
             response_data = {
-                "access_token": auth_response.session.access_token,
-                "refresh_token": auth_response.session.refresh_token,
+                "access_token": auth_response.session.access_token,  # type: ignore
+                "refresh_token": auth_response.session.refresh_token,  # type: ignore
                 "token_type": "bearer",
                 "expires_in": 3600,  # 1 hour for regular access token
                 "user": user_data
@@ -108,7 +133,7 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(e)
-            )
+            ) from e
 
     async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
         """
@@ -116,7 +141,7 @@ class AuthService:
         """
         try:
             auth_response = self.client.auth.refresh_session(refresh_token)
-            
+
             if not auth_response.session:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -134,20 +159,27 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(e)
-            )
+            ) from e
 
-    async def login_with_remember_token(self, remember_token: str, device_id: str) -> Dict[str, Any]:
+    async def login_with_remember_token(
+        self,
+        remember_token: str,
+        device_id: str
+    ) -> Dict[str, Any]:
         """
         Login user using remember me token.
         """
         try:
             # Hash the provided token to compare with stored hash
             token_hash = hashlib.sha256(remember_token.encode()).hexdigest()
-            
+
             # Find and validate remember me token
             token_response = self.admin_client.table("remember_me_tokens").select(
                 "*, users(*)"
-            ).eq("token_hash", token_hash).eq("device_id", device_id).eq("is_active", True).execute()
+            ).eq("token_hash", token_hash
+            ).eq("device_id", device_id
+            ).eq("is_active", True
+            ).execute()
 
             if not token_response.data:
                 raise HTTPException(
@@ -156,8 +188,7 @@ class AuthService:
                 )
 
             token_data = token_response.data[0]
-            
-            # Check if token is expired
+                        # Check if token is expired
             expires_at = datetime.fromisoformat(token_data["expires_at"].replace('Z', '+00:00'))
             if expires_at < datetime.now(expires_at.tzinfo):
                 # Clean up expired token
@@ -174,8 +205,13 @@ class AuthService:
 
             # Get fresh user profile
             user_id = token_data["user_id"]
-            profile_response = self.admin_client.table("users").select("*").eq("id", user_id).execute()
-            
+            profile_response = (
+                self.admin_client.table("users")
+                .select("*")
+                .eq("id", user_id)
+                .execute()
+            )
+
             if not profile_response.data:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -193,29 +229,45 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(e)
-            )
+            ) from e
 
-    async def logout(self, user_id: str, device_id: str = None, logout_all_devices: bool = False) -> Dict[str, str]:
+    async def logout(
+        self,
+        user_id: str,
+        device_id: Optional[str] = None,
+        logout_all_devices: bool = False
+    ) -> Dict[str, str]:
         """
         Logout user and cleanup remember me tokens and device status.
         """
         try:
             # Logout from Supabase
             self.client.auth.sign_out()
-            
+
             if logout_all_devices:
                 # Remove all remember me tokens for user
-                self.admin_client.table("remember_me_tokens").delete().eq("user_id", user_id).execute()
-                
+                (
+                    self.admin_client.table("remember_me_tokens")
+                    .delete()
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+
                 # Deactivate all devices for user
                 self.admin_client.table("user_devices").update({
                     "is_active": False
                 }).eq("user_id", user_id).execute()
-                
+
             elif device_id:
                 # Remove remember me token for specific device
-                self.admin_client.table("remember_me_tokens").delete().eq("user_id", user_id).eq("device_id", device_id).execute()
-                
+                (
+                    self.admin_client.table("remember_me_tokens")
+                    .delete()
+                    .eq("user_id", user_id)
+                    .eq("device_id", device_id)
+                    .execute()
+                )
+
                 # Deactivate specific device
                 self.admin_client.table("user_devices").update({
                     "is_active": False
@@ -227,7 +279,7 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)
-            )
+            ) from e
 
     async def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
@@ -236,10 +288,15 @@ class AuthService:
         try:
             user = self.client.auth.get_user(token)
             return user.dict() if user else None
-        except Exception:
+        except (ValueError, AttributeError, ConnectionError):
             return None
 
-    async def _create_remember_me_token(self, user_id: str, device_info, request: Request = None) -> str:
+    async def _create_remember_me_token(
+        self,
+        user_id: str,
+        device_info,
+        request: Optional[Request] = None
+    ) -> str:
         """
         Create a remember me token for the user and device.
         Deactivate any existing active tokens for the same device from other users.
@@ -248,10 +305,10 @@ class AuthService:
             # Generate secure random token
             remember_token = secrets.token_urlsafe(32)
             token_hash = hashlib.sha256(remember_token.encode()).hexdigest()
-            
+
             # Set expiration to 30 days from now
             expires_at = datetime.utcnow() + timedelta(days=30)
-            
+
             # Get IP address from request
             ip_address = None
             if request:
@@ -261,7 +318,10 @@ class AuthService:
             # This ensures only one user can have an active remember me token per device
             self.admin_client.table("remember_me_tokens").update({
                 "is_active": False
-            }).eq("device_id", device_info.device_id).neq("user_id", user_id).eq("is_active", True).execute()
+            }).eq("device_id", device_info.device_id
+            ).neq("user_id", user_id
+            ).eq("is_active", True
+            ).execute()
 
             # Store token in database (upsert - update if exists, insert if not)
             token_data = {
@@ -275,11 +335,22 @@ class AuthService:
             }
 
             # First try to update existing token for this user+device
-            existing_token = self.admin_client.table("remember_me_tokens").select("id").eq("user_id", user_id).eq("device_id", device_info.device_id).execute()
-            
+            existing_token = (
+                self.admin_client.table("remember_me_tokens")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("device_id", device_info.device_id)
+                .execute()
+            )
+
             if existing_token.data:
                 # Update existing token
-                self.admin_client.table("remember_me_tokens").update(token_data).eq("id", existing_token.data[0]["id"]).execute()
+                (
+                    self.admin_client.table("remember_me_tokens")
+                    .update(token_data)
+                    .eq("id", existing_token.data[0]["id"])
+                    .execute()
+                )
             else:
                 # Insert new token
                 self.admin_client.table("remember_me_tokens").insert(token_data).execute()
@@ -290,7 +361,7 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create remember me token: {str(e)}"
-            )
+            ) from e
 
     async def _register_or_update_device(self, user_id: str, device_info):
         """
@@ -302,7 +373,10 @@ class AuthService:
             # This ensures only one user can have an active device registration per device
             self.admin_client.table("user_devices").update({
                 "is_active": False
-            }).eq("device_id", device_info.device_id).neq("user_id", user_id).eq("is_active", True).execute()
+            }).eq("device_id", device_info.device_id
+            ).neq("user_id", user_id
+            ).eq("is_active", True
+            ).execute()
 
             device_data = {
                 "user_id": user_id,
@@ -314,17 +388,28 @@ class AuthService:
             }
 
             # Check if device already exists
-            existing_device = self.admin_client.table("user_devices").select("id").eq("user_id", user_id).eq("device_id", device_info.device_id).execute()
-            
+            existing_device = (
+                self.admin_client.table("user_devices")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("device_id", device_info.device_id)
+                .execute()
+            )
+
             if existing_device.data:
                 # Update existing device
-                self.admin_client.table("user_devices").update(device_data).eq("id", existing_device.data[0]["id"]).execute()
+                (
+                    self.admin_client.table("user_devices")
+                    .update(device_data)
+                    .eq("id", existing_device.data[0]["id"])
+                    .execute()
+                )
             else:
                 # Insert new device
                 device_data["fcm_token"] = ""  # Will be updated later when FCM token is available
                 self.admin_client.table("user_devices").insert(device_data).execute()
 
-        except Exception as e:
+        except (ValueError, ConnectionError, AttributeError) as e:
             # Log error but don't fail the login process
             print(f"Error registering device: {e}")
 
@@ -334,8 +419,8 @@ class AuthService:
         """
         try:
             self.admin_client.table("remember_me_tokens").delete().eq("id", token_id).execute()
-        except Exception as e:
+        except (ValueError, ConnectionError, AttributeError) as e:
             print(f"Error cleaning up remember token: {e}")
 
 # Create global auth service instance
-auth_service = AuthService() 
+auth_service = AuthService()
