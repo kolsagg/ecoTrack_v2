@@ -38,7 +38,8 @@ class AuthService:
                     "data": {
                         "first_name": user_data.first_name,
                         "last_name": user_data.last_name
-                    }
+                    },
+                    "email_redirect_to": f"{settings.WEB_BASE_URL}/api/v1/auth/confirm"
                 }
             })
 

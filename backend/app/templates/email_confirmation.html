@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-mail Confirmation - EcoTrack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            margin: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+
+        .brand-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .status-container {
+            margin: 2rem 0;
+        }
+
+        .loading {
+            display: block;
+        }
+
+        .success, .error {
+            display: none;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading .icon {
+            animation: spin 2s linear infinite;
+            color: #667eea;
+        }
+
+        .success .icon {
+            color: #4CAF50;
+        }
+
+        .error .icon {
+            color: #f44336;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+            padding: 2rem 0;
+            border-top: 1px solid #eee;
+        }
+
+        .feature {
+            padding: 1rem;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #4CAF50;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .feature-description {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .brand-name {
+                font-size: 2rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .retry-info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+            text-align: left;
+        }
+
+        .countdown {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🌱</div>
+        <h1 class="brand-name">EcoTrack</h1>
+        <p class="tagline">Smart Expense Tracking and Sustainable Living</p>
+
+        <!-- Loading State -->
+        <div class="status-container loading" id="loadingState">
+            <div class="icon">⏳</div>
+            <h2 class="message">Email Confirming...</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="description">Please wait, your email is being confirmed.</p>
+        </div>
+
+        <!-- Success State -->
+        <div class="status-container success" id="successState">
+            <div class="icon">✅</div>
+            <h2 class="message">Email Confirmed Successfully!</h2>
+            <p class="description">
+                Great! Your email has been confirmed. You can now use all of EcoTrack's features.
+            </p>
+            <div style="margin: 2rem 0;">
+                <a href="#" class="btn" id="openAppBtn">Open App</a>
+                <a href="#" class="btn btn-secondary" id="continueWebBtn">Continue on Web</a>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div class="status-container error" id="errorState">
+            <div class="icon">❌</div>
+            <h2 class="message">Confirmation Failed</h2>
+            <p class="description" id="errorDescription">
+                An error occurred while confirming your email. The link may be invalid or expired.
+            </p>
+            <div class="retry-info">
+                <strong>What you can do:</strong>
+                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                    <li>Check your email for the confirmation link again</li>
+                    <li>Check your spam/junk folder</li>
+                    <li>Request a new confirmation email</li>
+                </ul>
+            </div>
+            <div style="margin: 2rem 0;">
+                <button class="btn" id="retryBtn">Retry</button>
+                <a href="#" class="btn btn-secondary" id="newEmailBtn">Send New Email</a>
+            </div>
+            <div class="countdown" id="countdown" style="display: none;">
+                Retry in: <span id="countdownTime">5</span> seconds
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">QR Code Scanning</h3>
+                <p class="feature-description">Scan receipts with QR codes to automatically record your expenses</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">AI Recommendations</h3>
+                <p class="feature-description">Get personalized financial advice with AI</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🌍</div>
+                <h3 class="feature-title">Sustainable Living</h3>
+                <p class="feature-description">Develop sustainable consumption habits</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 EcoTrack. All rights reserved.</p>
+            <p>Istanbul Aydın University - Graduation Project</p>
+        </div>
+    </div>
+
+    <script>
+        // URL'den parametreleri al
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
+        const tokenType = urlParams.get('token_type');
+        const type = urlParams.get('type');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+
+        // Frontend URL'lerini ayarla
+        const FRONTEND_URL = 'http://localhost:8080'; // Flutter app URL
+        const WEB_URL = window.location.origin; // Current web app URL
+
+        // Durumları yönet
+        const loadingState = document.getElementById('loadingState');
+        const successState = document.getElementById('successState');
+        const errorState = document.getElementById('errorState');
+        const progressFill = document.getElementById('progressFill');
+
+        // Progress bar animasyonu
+        function animateProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 2;
+                progressFill.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(processVerification, 500);
+                }
+            }, 50);
+        }
+
+        // Doğrulama işlemini kontrol et
+        function processVerification() {
+            if (error) {
+                showError(errorDescription || 'An unknown error occurred');
+                return;
+            }
+
+            if (type === 'signup' && accessToken) {
+                // Email başarıyla doğrulandı
+                showSuccess();
+                
+                // Token'ları localStorage'a kaydet (opsiyonel)
+                if (accessToken) localStorage.setItem('access_token', accessToken);
+                if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+            } else if (type === 'recovery') {
+                // Şifre sıfırlama
+                window.location.href = `${FRONTEND_URL}/auth/reset-password?access_token=${accessToken}&refresh_token=${refreshToken}`;
+            } else {
+                showError('Invalid verification type');
+            }
+        }
+
+        function showSuccess() {
+            loadingState.style.display = 'none';
+            successState.style.display = 'block';
+            errorState.style.display = 'none';
+
+            // Buton olaylarını ayarla
+            document.getElementById('openAppBtn').onclick = function(e) {
+                e.preventDefault();
+                // Deep link ile uygulamayı aç
+                const deepLink = `ecotrack://auth/verified?token=${accessToken}`;
+                window.location.href = deepLink;
+                
+                // 2 saniye sonra app store'a yönlendir (eğer uygulama açılmazsa)
+                setTimeout(() => {
+                    // iOS için App Store, Android için Google Play
+                    const userAgent = navigator.userAgent;
+                    if (/iPad|iPhone|iPod/.test(userAgent)) {
+                        window.location.href = 'https://apps.apple.com/app/ecotrack';
+                    } else if (/Android/.test(userAgent)) {
+                        window.location.href = 'https://play.google.com/store/apps/details?id=com.ecotrack.app';
+                    } else {
+                        alert('Please download the EcoTrack app from your mobile device.');
+                    }
+                }, 2000);
+            };
+
+            document.getElementById('continueWebBtn').onclick = function(e) {
+                e.preventDefault();
+                // Web uygulamasına yönlendir
+                window.location.href = `${FRONTEND_URL}/dashboard?token=${accessToken}`;
+            };
+        }
+
+        function showError(message) {
+            loadingState.style.display = 'none';
+            successState.style.display = 'none';
+            errorState.style.display = 'block';
+            
+            document.getElementById('errorDescription').textContent = message;
+
+            // Retry butonu
+            document.getElementById('retryBtn').onclick = function() {
+                showLoading();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            };
+
+            // Yeni email butonu
+            document.getElementById('newEmailBtn').onclick = function(e) {
+                e.preventDefault();
+                window.location.href = `${FRONTEND_URL}/auth/register`;
+            };
+
+            // Countdown timer
+            startCountdown();
+        }
+
+        function showLoading() {
+            loadingState.style.display = 'block';
+            successState.style.display = 'none';
+            errorState.style.display = 'none';
+            progressFill.style.width = '0%';
+        }
+
+        function startCountdown() {
+            const countdownElement = document.getElementById('countdown');
+            const countdownTimeElement = document.getElementById('countdownTime');
+            let timeLeft = 5;
+            
+            countdownElement.style.display = 'block';
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                countdownTimeElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    countdownElement.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        // Sayfa yüklendiğinde başlat
+        window.onload = function() {
+            // Hemen doğrulama varsa kontrol et, yoksa progress bar başlat
+            if (error || (type && accessToken)) {
+                setTimeout(processVerification, 1000);
+            } else {
+                animateProgress();
+            }
+        };
+
+        // Console'da debug bilgileri göster
+        console.log('Email Verification Debug Info:', {
+            accessToken: accessToken ? 'Present' : 'Missing',
+            refreshToken: refreshToken ? 'Present' : 'Missing',
+            type: type,
+            error: error,
+            errorDescription: errorDescription
+        });
+    </script>
+</body>
+</html> 

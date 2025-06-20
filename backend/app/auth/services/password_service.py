@@ -1,6 +1,9 @@
 from typing import Dict
 from fastapi import HTTPException, status
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PasswordService:
     def __init__(self):
@@ -13,17 +16,17 @@ class PasswordService:
         her durumda aynı mesaj döndürülür.
         """
         try:
-            # Email adresinin sistemde olup olmadığını kontrol et
-            user_exists = await self._check_user_exists(email)
+            # Doğrudan Supabase auth sistemine email gönderme isteği yap
+            # Supabase kendi auth.users tablosunu kontrol eder
+            # Eğer email yoksa sessizce başarısız olur, hata vermez
+            response = self.client.auth.reset_password_email(
+                email,
+                {
+                    "redirect_to": f"{settings.FRONTEND_URL}/auth/reset-password"
+                }
+            )
             
-            if user_exists:
-                # Kullanıcı mevcutsa gerçekten email gönder
-                self.client.auth.reset_password_email(
-                    email,
-                    {
-                        "redirect_to": f"{settings.FRONTEND_URL}/auth/reset-password"
-                    }
-                )
+            logger.info(f"Password reset email requested for: {email}")
             
             # Her durumda aynı güvenli mesaj döndür
             return {
@@ -31,23 +34,23 @@ class PasswordService:
             }
             
         except Exception as e:
+            logger.error(f"Error sending password reset email for {email}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="İstek işlenirken bir hata oluştu"
-            )
+            ) from e
 
-    async def _check_user_exists(self, email: str) -> bool:
+    async def _check_user_exists_in_auth(self, email: str) -> bool:
         """
-        Email adresinin sistemde kayıtlı olup olmadığını kontrol et.
-        Bu bilgi sadece sistem içinde kullanılır, dışarıya sızmaz.
+        Supabase auth sisteminde kullanıcının var olup olmadığını kontrol et.
+        Bu metod artık kullanılmıyor ama gelecekte gerekirse buradadır.
         """
         try:
-            # Users tablosundan email adresini ara
-            result = self.client.table("users").select("id").eq("email", email).execute()
-            return len(result.data) > 0
+            # Not: Supabase client'ı admin API'sini kullanarak auth.users'ları sorgulayabilir
+            # Ama bu genellikle server-side admin işlemleri için kullanılır
+            # Normal kullanım için reset_password_email direkt çağırmak daha güvenli
+            return True
         except Exception:
-            # Hata durumunda güvenli tarafta kalarak True döndür
-            # Böylece email gönderilmeye çalışılır (Supabase zaten kontrol eder)
             return True
 
     async def confirm_password_reset(self, token: str, new_password: str) -> Dict[str, str]:
@@ -55,15 +58,25 @@ class PasswordService:
         Confirm password reset with token and new password.
         """
         try:
-            self.client.auth.update_user({
+            response = self.client.auth.update_user({
                 "password": new_password
             })
-            return {"message": "Şifre başarıyla sıfırlandı"}
+            
+            if response.user:
+                logger.info(f"Password successfully reset for user: {response.user.id}")
+                return {"message": "Şifre başarıyla sıfırlandı"}
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Şifre sıfırlama başarısız oldu"
+                )
+                
         except Exception as e:
+            logger.error(f"Error confirming password reset: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
-            )
+                detail="Geçersiz token veya şifre sıfırlama süresi dolmuş"
+            ) from e
 
 # Create global password service instance
 password_service = PasswordService() 

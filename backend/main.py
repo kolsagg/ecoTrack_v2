@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import uvicorn
 import asyncio
 import uuid
+import os
 
 from app.core.config import settings
 from app.core.logging_config import setup_logging, log_request, log_response, get_logger
@@ -142,6 +144,11 @@ app.include_router(health_router, tags=["Health Check"])
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Mount static files for templates (CSS, JS, images)
+static_path = os.path.join(os.path.dirname(__file__), "app", "static")
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 @app.get("/")
 async def root():
