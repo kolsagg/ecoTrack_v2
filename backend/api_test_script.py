@@ -92,6 +92,124 @@ def test_auth():
         print("\n❌ Login failed. Cannot proceed with authenticated tests.")
         TOKEN = None
 
+def test_monthly_budget_system():
+    """Yeni aylık bütçe sistemini test eder."""
+    if not TOKEN:
+        print("\n❌ Skipping Budget tests: No valid token.")
+        return
+
+    print_header("Monthly Budget System Tests")
+    
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+    test_year = current_year
+    test_month = current_month
+    
+    try:
+        # 1. Mevcut ayın bütçesini kontrol et
+        print_request("GET", f"/budget?year={test_year}&month={test_month}")
+        response = requests.get(f"{BASE_URL}/budget?year={test_year}&month={test_month}", headers=HEADERS)
+        print_response(response)
+        
+        # 2. Yeni aylık bütçe oluştur
+        print_request("POST", "/budget")
+        budget_data = {
+            "total_monthly_budget": 5000.0,
+            "currency": "TRY",
+            "auto_allocate": True,
+            "year": test_year,
+            "month": test_month
+        }
+        response = requests.post(f"{BASE_URL}/budget", headers=HEADERS, json=budget_data)
+        success = print_response(response)
+        
+        if not success:
+            print("❌ Budget creation failed, trying without year/month (current month)")
+            budget_data = {
+                "total_monthly_budget": 5000.0,
+                "currency": "TRY",
+                "auto_allocate": False
+            }
+            response = requests.post(f"{BASE_URL}/budget", headers=HEADERS, json=budget_data)
+            print_response(response)
+        
+        # 3. Bütçe listesini getir
+        print_request("GET", "/budget/list")
+        response = requests.get(f"{BASE_URL}/budget/list", headers=HEADERS)
+        print_response(response)
+        
+        # 4. Bütçe özetini getir
+        print_request("GET", f"/budget/summary?year={test_year}&month={test_month}")
+        response = requests.get(f"{BASE_URL}/budget/summary?year={test_year}&month={test_month}", headers=HEADERS)
+        print_response(response)
+        
+        # 5. Kategorileri listele (kategori bütçesi için)
+        print_request("GET", "/categories")
+        response = requests.get(f"{BASE_URL}/categories", headers=HEADERS)
+        categories_response = print_response(response)
+        
+        if categories_response:
+            categories = response.json()  # Doğrudan liste dönüyor
+            if categories:
+                # İlk kategoriyi kullan
+                category_id = categories[0]["id"]
+                
+                # 6. Kategori bütçesi oluştur
+                print_request("POST", f"/budget/categories?year={test_year}&month={test_month}")
+                category_budget_data = {
+                    "category_id": category_id,
+                    "monthly_limit": 500.0,
+                    "is_active": True
+                }
+                response = requests.post(f"{BASE_URL}/budget/categories?year={test_year}&month={test_month}", 
+                                       headers=HEADERS, json=category_budget_data)
+                print_response(response)
+                
+                # 7. Kategori bütçelerini listele
+                print_request("GET", f"/budget/categories?year={test_year}&month={test_month}")
+                response = requests.get(f"{BASE_URL}/budget/categories?year={test_year}&month={test_month}", headers=HEADERS)
+                print_response(response)
+        
+        # 8. Otomatik bütçe dağılımı uygula
+        print_request("POST", "/budget/apply-allocation")
+        allocation_data = {
+            "total_budget": 4000.0,
+            "year": test_year,
+            "month": test_month
+        }
+        response = requests.post(f"{BASE_URL}/budget/apply-allocation", headers=HEADERS, json=allocation_data)
+        print_response(response)
+        
+        # 9. Son bütçe özetini getir
+        print_request("GET", f"/budget/summary?year={test_year}&month={test_month}")
+        response = requests.get(f"{BASE_URL}/budget/summary?year={test_year}&month={test_month}", headers=HEADERS)
+        print_response(response)
+        
+        # 10. Gelecek ay için bütçe oluştur
+        next_month = test_month + 1 if test_month < 12 else 1
+        next_year = test_year if test_month < 12 else test_year + 1
+        
+        print_request("POST", "/budget")
+        future_budget_data = {
+            "total_monthly_budget": 6000.0,
+            "currency": "TRY",
+            "auto_allocate": False,
+            "year": next_year,
+            "month": next_month
+        }
+        response = requests.post(f"{BASE_URL}/budget", headers=HEADERS, json=future_budget_data)
+        print_response(response)
+        
+        # 11. Tüm bütçeleri listele
+        print_request("GET", "/budget/list")
+        response = requests.get(f"{BASE_URL}/budget/list", headers=HEADERS)
+        print_response(response)
+        
+        print("\n✅ Monthly Budget System test completed!")
+        
+    except Exception as e:
+        print(f"\n❌ Error during budget testing: {e}")
+
 def test_expenses_and_categories():
     """Harcama ve kategori endpoint'lerini test eder."""
     if not TOKEN:
@@ -164,8 +282,6 @@ def test_expenses_and_categories():
             response = requests.delete(f"{BASE_URL}/categories/{created_category_id}", headers=HEADERS)
             print_response(response)
 
-
-
 def test_reporting():
     """Raporlama endpoint'lerini test eder."""
     if not TOKEN:
@@ -198,35 +314,49 @@ def main_menu():
         print("  EcoTrack API Test Menu")
         print("-"*40)
         print("1. Run All Tests")
-        print("2. Test Authentication (Login)")
-        print("3. Test Expenses & Categories (Requires Login)")
-        print("4. Test Reporting (Requires Login)")
+        print("2. Test Authentication Only")
+        print("3. Test Monthly Budget System Only")
+        print("4. Test Expenses & Categories Only")
+        print("5. Test Reporting Only")
+        print("6. Test Budget Health Check")
         print("0. Exit")
         print("-"*40)
         
-        choice = input("Enter your choice: ")
+        choice = input("Select an option (0-6): ").strip()
         
-        if choice == '1':
+        if choice == "0":
+            print("👋 Goodbye!")
+            break
+        elif choice == "1":
             test_auth()
+            test_monthly_budget_system()
             test_expenses_and_categories()
             test_reporting()
-        elif choice == '2':
+        elif choice == "2":
             test_auth()
-        elif choice == '3':
-            if not TOKEN: test_auth()
-            if TOKEN: test_expenses_and_categories()
-        elif choice == '4':
-            if not TOKEN: test_auth()
-            if TOKEN: test_reporting()
-        elif choice == '0':
-            print("Exiting test script. Goodbye!")
-            break
+        elif choice == "3":
+            if not TOKEN:
+                test_auth()
+            test_monthly_budget_system()
+        elif choice == "4":
+            if not TOKEN:
+                test_auth()
+            test_expenses_and_categories()
+        elif choice == "5":
+            if not TOKEN:
+                test_auth()
+            test_reporting()
+        elif choice == "6":
+            print_header("Budget Health Check")
+            print_request("GET", "/budget/health")
+            response = requests.get(f"{BASE_URL}/budget/health")
+            print_response(response)
         else:
-            print("Invalid choice. Please try again.")
+            print("❌ Invalid choice. Please try again.")
 
 if __name__ == "__main__":
-    # Windows'ta renk kodlarının çalışması için
-    if os.name == 'nt':
-        os.system('color')
+    print("🚀 EcoTrack API Test Script")
+    print("📋 Make sure your FastAPI server is running on http://localhost:8000")
+    print("🔑 Update TEST_USER_EMAIL and TEST_USER_PASSWORD in the script if needed")
     
     main_menu()

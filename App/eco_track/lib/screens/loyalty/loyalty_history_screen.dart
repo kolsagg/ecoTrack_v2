@@ -17,16 +17,57 @@ class LoyaltyHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _LoyaltyHistoryScreenState extends ConsumerState<LoyaltyHistoryScreen> {
+  final ScrollController _scrollController = ScrollController();
+  TransactionType? _selectedFilter;
+  final int _pageSize = 20;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      _loadHistory();
     });
+    _scrollController.addListener(_onScroll);
   }
 
-  void _loadData() {
-    ref.read(loyaltyHistoryProvider.notifier).loadLoyaltyHistory();
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadHistory() {
+    ref
+        .read(loyaltyHistoryProvider.notifier)
+        .loadLoyaltyHistory(limit: _pageSize);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      _loadMoreHistory();
+    }
+  }
+
+  void _loadMoreHistory() {
+    final historyState = ref.read(loyaltyHistoryProvider);
+    if (historyState.history != null &&
+        historyState.history!.transactions.isNotEmpty &&
+        !historyState.isLoading) {
+      ref
+          .read(loyaltyHistoryProvider.notifier)
+          .loadLoyaltyHistory(limit: _pageSize);
+    }
+  }
+
+  List<LoyaltyTransaction> _getFilteredTransactions(
+    List<LoyaltyTransaction> transactions,
+  ) {
+    if (_selectedFilter == null) return transactions;
+    return transactions
+        .where((transaction) => transaction.transactionType == _selectedFilter)
+        .toList();
   }
 
   @override
@@ -41,51 +82,68 @@ class _LoyaltyHistoryScreenState extends ConsumerState<LoyaltyHistoryScreen> {
       ),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Points History'),
+          title: const Text('Transaction History'),
           backgroundColor: AppConstants.primaryColor,
           foregroundColor: Colors.white,
           actions: [
             IconButton(
-              onPressed: _loadData,
+              onPressed: _loadHistory,
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh',
+            ),
+            IconButton(
+              onPressed: _showFilterDialog,
+              icon: Icon(
+                _selectedFilter != null
+                    ? Icons.filter_alt
+                    : Icons.filter_alt_outlined,
+              ),
+              tooltip: 'Filter',
             ),
           ],
         ),
         body: LoadingOverlay(
-          isLoading: historyState.isLoading,
+          isLoading: historyState.isLoading && historyState.history == null,
           loadingText: 'Loading history...',
           child: RefreshIndicator(
-            onRefresh: () async => _loadData(),
-            child: historyState.history != null
-                ? _buildHistoryList(historyState.history!)
-                : historyState.error != null
-                ? _buildErrorState(historyState.error!)
-                : _buildEmptyState(),
+            onRefresh: () async => _loadHistory(),
+            child: _buildContent(historyState),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHistoryList(LoyaltyHistoryResponse history) {
-    if (history.history.isEmpty) {
+  Widget _buildContent(LoyaltyHistoryState historyState) {
+    if (historyState.error != null && historyState.history == null) {
+      return _buildErrorState(historyState.error!);
+    }
+
+    if (historyState.history == null || !historyState.history!.success) {
+      return _buildEmptyState();
+    }
+
+    final filteredTransactions = _getFilteredTransactions(
+      historyState.history!.transactions,
+    );
+
+    if (filteredTransactions.isEmpty) {
       return _buildEmptyState();
     }
 
     return Column(
       children: [
-        // Summary Card
-        _buildSummaryCard(history),
-
-        // History List
+        if (_selectedFilter != null) _buildFilterChip(),
         Expanded(
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: history.history.length,
+            itemCount: filteredTransactions.length + 1,
             itemBuilder: (context, index) {
-              final item = history.history[index];
-              return _buildHistoryItem(item);
+              if (index == filteredTransactions.length) {
+                return _buildLoadingIndicator(historyState.isLoading);
+              }
+              return _buildTransactionCard(filteredTransactions[index]);
             },
           ),
         ),
@@ -93,279 +151,127 @@ class _LoyaltyHistoryScreenState extends ConsumerState<LoyaltyHistoryScreen> {
     );
   }
 
-  Widget _buildSummaryCard(LoyaltyHistoryResponse history) {
-    final totalPoints = history.history.fold<int>(
-      0,
-      (sum, item) => sum + item.pointsEarned,
-    );
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppConstants.primaryColor.withValues(alpha: 0.1),
-            AppConstants.primaryColor.withValues(alpha: 0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
+  Widget _buildFilterChip() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem(
-            'Total Transactions',
-            NumberFormat('#,###').format(history.count),
-            Icons.receipt_long,
-          ),
-          Container(width: 1, height: 40, color: Colors.grey[300]),
-          _buildSummaryItem(
-            'Points Earned',
-            NumberFormat('#,###').format(totalPoints),
-            Icons.stars,
+          Chip(
+            label: Text(_selectedFilter!.displayName),
+            deleteIcon: const Icon(Icons.close, size: 18),
+            onDeleted: () {
+              setState(() {
+                _selectedFilter = null;
+              });
+            },
+            backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.1),
+            side: BorderSide(color: AppConstants.primaryColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String title, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: AppConstants.primaryColor, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppConstants.primaryColor,
+  Widget _buildTransactionCard(LoyaltyTransaction transaction) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _getTransactionTypeColor(
+              transaction.transactionType,
+            ).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            _getTransactionTypeIcon(transaction.transactionType),
+            color: _getTransactionTypeColor(transaction.transactionType),
+            size: 24,
           ),
         ),
-        Text(
-          title,
+        title: Text(
+          transaction.merchantName ?? transaction.transactionType.displayName,
           style: Theme.of(
             context,
-          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-          textAlign: TextAlign.center,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
-      ],
-    );
-  }
-
-  Widget _buildHistoryItem(LoyaltyHistoryItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+        subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.merchantName ?? 'Unknown Merchant',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat(
-                          'MMM dd, yyyy • HH:mm',
-                        ).format(item.createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 4),
+            if (transaction.category != null)
+              Text(
+                transaction.category!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.add, color: Colors.green[700], size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${NumberFormat('#,###').format(item.pointsEarned)} pts',
-                        style: TextStyle(
-                          color: Colors.green[700],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Transaction Details
-            Row(
-              children: [
-                Icon(Icons.attach_money, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  '₺${NumberFormat('#,##0.00').format(item.transactionAmount)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Transaction ID: ${item.transactionId.substring(0, 8)}...',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[500],
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Points Breakdown
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Points Breakdown',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Base Points',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      Text(
-                        '${NumberFormat('#,###').format(item.calculationDetails.basePoints)} pts',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (item.calculationDetails.bonusPoints > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Bonus Points',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        Text(
-                          '${NumberFormat('#,###').format(item.calculationDetails.bonusPoints)} pts',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green[700],
-                              ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const Divider(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Earned',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${NumberFormat('#,###').format(item.pointsEarned)} pts',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            const SizedBox(height: 2),
+            Text(
+              DateFormat('MMM dd, yyyy • HH:mm').format(transaction.createdAt),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              transaction.transactionType.description,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '+${transaction.pointsEarned} pts',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '₺${NumberFormat('#,##0.00').format(transaction.transactionAmount)}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
+        onTap: () => _showTransactionDetails(transaction),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.history, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No Points History',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start making purchases to earn loyalty points and see your history here.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed('/add-expense'),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Expense'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildLoadingIndicator(bool isLoading) {
+    if (!isLoading) return const SizedBox.shrink();
+
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 
   Widget _buildErrorState(String error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -373,10 +279,9 @@ class _LoyaltyHistoryScreenState extends ConsumerState<LoyaltyHistoryScreen> {
             const SizedBox(height: 16),
             Text(
               'Error Loading History',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.red[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -387,17 +292,246 @@ class _LoyaltyHistoryScreenState extends ConsumerState<LoyaltyHistoryScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+            ElevatedButton(
+              onPressed: _loadHistory,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              _selectedFilter != null
+                  ? 'No ${_selectedFilter!.displayName} Transactions'
+                  : 'No Transaction History',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _selectedFilter != null
+                  ? 'No transactions found for the selected filter.'
+                  : 'Start making purchases to see your transaction history.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getTransactionTypeColor(TransactionType type) {
+    switch (type) {
+      case TransactionType.expense:
+        return Colors.blue;
+      case TransactionType.bonus:
+        return Colors.green;
+      case TransactionType.adjustment:
+        return Colors.orange;
+    }
+  }
+
+  IconData _getTransactionTypeIcon(TransactionType type) {
+    switch (type) {
+      case TransactionType.expense:
+        return Icons.shopping_bag;
+      case TransactionType.bonus:
+        return Icons.card_giftcard;
+      case TransactionType.adjustment:
+        return Icons.tune;
+    }
+  }
+
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Filter Transactions',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.all_inclusive),
+              title: const Text('All Transactions'),
+              onTap: () {
+                setState(() {
+                  _selectedFilter = null;
+                });
+                Navigator.pop(context);
+              },
+              trailing: _selectedFilter == null
+                  ? Icon(Icons.check, color: AppConstants.primaryColor)
+                  : null,
+            ),
+            ...TransactionType.values.map(
+              (type) => ListTile(
+                leading: Icon(_getTransactionTypeIcon(type)),
+                title: Text(type.displayName),
+                subtitle: Text(type.description),
+                onTap: () {
+                  setState(() {
+                    _selectedFilter = type;
+                  });
+                  Navigator.pop(context);
+                },
+                trailing: _selectedFilter == type
+                    ? Icon(Icons.check, color: AppConstants.primaryColor)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTransactionDetails(LoyaltyTransaction transaction) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _getTransactionTypeColor(
+                      transaction.transactionType,
+                    ).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _getTransactionTypeIcon(transaction.transactionType),
+                    color: _getTransactionTypeColor(
+                      transaction.transactionType,
+                    ),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.merchantName ??
+                            transaction.transactionType.displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        transaction.transactionType.displayName,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildDetailRow('Transaction ID', transaction.id),
+            _buildDetailRow(
+              'Amount',
+              '₺${NumberFormat('#,##0.00').format(transaction.transactionAmount)}',
+            ),
+            _buildDetailRow('Points Earned', '${transaction.pointsEarned} pts'),
+            if (transaction.category != null)
+              _buildDetailRow('Category', transaction.category!),
+            _buildDetailRow(
+              'Date',
+              DateFormat('MMM dd, yyyy • HH:mm').format(transaction.createdAt),
+            ),
+            if (transaction.expenseId != null)
+              _buildDetailRow('Expense ID', transaction.expenseId!),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Close'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }

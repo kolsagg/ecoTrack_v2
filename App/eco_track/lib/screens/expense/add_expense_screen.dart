@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/receipt/receipt_requests.dart';
-import '../../models/merchant/merchant_models.dart';
 import '../../providers/receipt_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
-import '../../widgets/common/merchant_autocomplete_field.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -23,13 +21,12 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   final _merchantController = TextEditingController();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
-  
+
   DateTime _selectedDate = DateTime.now();
   String _selectedCurrency = 'TRY';
-  
+
   final List<ExpenseItem> _items = [];
   bool _isLoading = false;
-  Merchant? _selectedMerchant;
 
   // Currency list
   final List<String> _currencies = ['TRY', 'USD', 'EUR'];
@@ -115,12 +112,12 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
         merchantName: _merchantController.text.trim(),
         expenseDate: _selectedDate,
         currency: _selectedCurrency,
-        notes: _notesController.text.trim().isEmpty 
-            ? null 
+        notes: _notesController.text.trim().isEmpty
+            ? null
             : _notesController.text.trim(),
         items: _items,
       );
-      
+
       // Debug: Print request JSON to see what's being sent
       print('DEBUG: Sending expense request: ${request.toJson()}');
 
@@ -174,21 +171,16 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Merchant Name with Autocomplete
-                  MerchantAutocompleteField(
+                  // Merchant Name
+                  CustomTextField(
                     controller: _merchantController,
                     label: 'Merchant/Store Name',
-                    hintText: 'e.g. Migros, Starbucks - yazarak arayın',
+                    hintText: 'e.g. Migros, Starbucks',
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Merchant name is required';
                       }
                       return null;
-                    },
-                    onMerchantSelected: (merchant) {
-                      setState(() {
-                        _selectedMerchant = merchant;
-                      });
                     },
                   ),
                   const SizedBox(height: 16),
@@ -300,10 +292,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         child: Text(
                           'No items added yet\nTap the button above to add items',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
                       ),
                     )
@@ -398,10 +387,7 @@ class _ItemDialog extends ConsumerStatefulWidget {
   final ExpenseItem? item;
   final Function(ExpenseItem) onAdd;
 
-  const _ItemDialog({
-    this.item,
-    required this.onAdd,
-  });
+  const _ItemDialog({this.item, required this.onAdd});
 
   @override
   ConsumerState<_ItemDialog> createState() => _ItemDialogState();
@@ -412,7 +398,7 @@ class _ItemDialogState extends ConsumerState<_ItemDialog> {
   final _descriptionController = TextEditingController();
   final _quantityController = TextEditingController();
   final _unitPriceController = TextEditingController();
-  
+
   String? _selectedCategory;
 
   @override
@@ -481,7 +467,7 @@ class _ItemDialogState extends ConsumerState<_ItemDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _quantityController,
                 decoration: const InputDecoration(
@@ -500,7 +486,7 @@ class _ItemDialogState extends ConsumerState<_ItemDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _unitPriceController,
                 decoration: const InputDecoration(
@@ -512,18 +498,19 @@ class _ItemDialogState extends ConsumerState<_ItemDialog> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Price is required';
                   }
-                  if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                  if (double.tryParse(value) == null ||
+                      double.parse(value) <= 0) {
                     return 'Enter valid price';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              
+
               Consumer(
                 builder: (context, ref, child) {
                   final categoriesAsync = ref.watch(categoriesProvider);
-                  
+
                   return categoriesAsync.when(
                     data: (categories) => DropdownButtonFormField<String>(
                       value: _selectedCategory,
@@ -589,4 +576,4 @@ class _ItemDialogState extends ConsumerState<_ItemDialog> {
       ],
     );
   }
-} 
+}

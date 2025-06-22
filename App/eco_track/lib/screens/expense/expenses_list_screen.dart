@@ -487,28 +487,41 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'No expenses yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No expenses yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Start by adding your first expense\nor scanning QR codes',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Pull down to refresh',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'Start by adding your first expense\nor scanning QR codes',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

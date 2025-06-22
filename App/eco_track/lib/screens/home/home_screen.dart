@@ -8,6 +8,8 @@ import '../../core/constants/app_constants.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/expense_provider.dart';
+import '../../providers/loyalty_provider.dart';
+import '../../models/loyalty/loyalty_models.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -38,6 +40,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .loadCategoryDistribution(year: _selectedYear, month: _selectedMonth);
     // Also refresh recent expenses when loading data
     ref.read(recentExpensesStateProvider.notifier).refreshRecentExpenses();
+    // Load loyalty status
+    ref.read(loyaltyStatusProvider.notifier).loadLoyaltyStatus();
   }
 
   String _getGreeting() {
@@ -166,6 +170,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Summary Cards - Moved down and reduced
                     if (categoryState.data != null)
                       _buildSummaryCards(categoryState.data!),
+
+                    const SizedBox(height: 24),
+
+                    // Loyalty Overview - Simple version
+                    _buildLoyaltyOverview(),
 
                     const SizedBox(height: 24),
 
@@ -385,6 +394,113 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             }).toList(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoyaltyOverview() {
+    final loyaltyState = ref.watch(loyaltyStatusProvider);
+
+    if (loyaltyState.isLoading) return const SizedBox.shrink();
+    if (loyaltyState.error != null) return const SizedBox.shrink();
+    if (loyaltyState.status == null) return const SizedBox.shrink();
+
+    final status = loyaltyState.status!;
+    final level = status.level ?? LoyaltyLevel.bronze;
+    final progress =
+        status.pointsToNextLevel != null && status.pointsToNextLevel! > 0
+        ? 1.0 -
+              (status.pointsToNextLevel! /
+                  (status.pointsToNextLevel! + status.points))
+        : 1.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => Navigator.of(context).pushNamed('/loyalty-dashboard'),
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Loyalty Status',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.star, color: Color(level.colorValue), size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  level.displayName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(level.colorValue),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${NumberFormat('#,###').format(status.points)} pts',
+                    style: TextStyle(
+                      color: AppConstants.primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (status.nextLevel != null &&
+                status.pointsToNextLevel != null) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(level.colorValue),
+                ),
+                minHeight: 4,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${NumberFormat('#,###').format(status.pointsToNextLevel)} points to ${status.nextLevel!.displayName}',
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

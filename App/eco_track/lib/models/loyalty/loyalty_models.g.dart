@@ -69,13 +69,54 @@ Map<String, dynamic> _$CalculationDetailsToJson(CalculationDetails instance) =>
       'level_multiplier': instance.levelMultiplier,
     };
 
+LoyaltyTransaction _$LoyaltyTransactionFromJson(Map<String, dynamic> json) =>
+    LoyaltyTransaction(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      expenseId: json['expense_id'] as String?,
+      pointsEarned: (json['points_earned'] as num).toInt(),
+      transactionAmount: (json['transaction_amount'] as num).toDouble(),
+      merchantName: json['merchant_name'] as String?,
+      category: json['category'] as String?,
+      calculationDetails: json['calculation_details'] as Map<String, dynamic>,
+      transactionType: $enumDecode(
+        _$TransactionTypeEnumMap,
+        json['transaction_type'],
+      ),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.parse(json['updated_at'] as String),
+    );
+
+Map<String, dynamic> _$LoyaltyTransactionToJson(LoyaltyTransaction instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'expense_id': instance.expenseId,
+      'points_earned': instance.pointsEarned,
+      'transaction_amount': instance.transactionAmount,
+      'merchant_name': instance.merchantName,
+      'category': instance.category,
+      'calculation_details': instance.calculationDetails,
+      'transaction_type': _$TransactionTypeEnumMap[instance.transactionType]!,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
+    };
+
+const _$TransactionTypeEnumMap = {
+  TransactionType.expense: 'expense',
+  TransactionType.bonus: 'bonus',
+  TransactionType.adjustment: 'adjustment',
+};
+
 LoyaltyHistoryResponse _$LoyaltyHistoryResponseFromJson(
   Map<String, dynamic> json,
 ) => LoyaltyHistoryResponse(
   success: json['success'] as bool,
   count: (json['count'] as num).toInt(),
-  history: (json['history'] as List<dynamic>)
-      .map((e) => LoyaltyHistoryItem.fromJson(e as Map<String, dynamic>))
+  transactions: (json['history'] as List<dynamic>)
+      .map((e) => LoyaltyTransaction.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 
@@ -84,7 +125,7 @@ Map<String, dynamic> _$LoyaltyHistoryResponseToJson(
 ) => <String, dynamic>{
   'success': instance.success,
   'count': instance.count,
-  'history': instance.history,
+  'history': instance.transactions,
 };
 
 LoyaltyHistoryItem _$LoyaltyHistoryItemFromJson(Map<String, dynamic> json) =>

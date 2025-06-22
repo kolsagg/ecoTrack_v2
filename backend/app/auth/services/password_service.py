@@ -12,8 +12,8 @@ class PasswordService:
     async def reset_password(self, email: str) -> Dict[str, str]:
         """
         Send password reset email.
-        Güvenlik nedeniyle email adresi sistemde olsun ya da olmasın
-        her durumda aynı mesaj döndürülür.
+        For security reasons, the same message is returned regardless of
+        whether the email address exists in the system or not.
         """
         try:
             # Doğrudan Supabase auth sistemine email gönderme isteği yap
@@ -30,20 +30,20 @@ class PasswordService:
             
             # Her durumda aynı güvenli mesaj döndür
             return {
-                "message": "Eğer bu email adresi sistemimizde kayıtlıysa, şifre sıfırlama bağlantısı gönderilecektir"
+                "message": "If this email address is registered in our system, a password reset link will be sent."
             }
             
         except Exception as e:
             logger.error(f"Error sending password reset email for {email}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="İstek işlenirken bir hata oluştu"
+                detail="An error occurred while processing the request"
             ) from e
 
     async def _check_user_exists_in_auth(self, email: str) -> bool:
         """
-        Supabase auth sisteminde kullanıcının var olup olmadığını kontrol et.
-        Bu metod artık kullanılmıyor ama gelecekte gerekirse buradadır.
+        Check if the user exists in the Supabase auth system.
+        This method is no longer used, but it is here for future reference.
         """
         try:
             # Not: Supabase client'ı admin API'sini kullanarak auth.users'ları sorgulayabilir
@@ -64,18 +64,18 @@ class PasswordService:
             
             if response.user:
                 logger.info(f"Password successfully reset for user: {response.user.id}")
-                return {"message": "Şifre başarıyla sıfırlandı"}
+                return {"message": "Password successfully reset"}
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Şifre sıfırlama başarısız oldu"
+                    detail="Password reset failed"
                 )
                 
         except Exception as e:
             logger.error(f"Error confirming password reset: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Geçersiz token veya şifre sıfırlama süresi dolmuş"
+                detail="Invalid token or password reset expired"
             ) from e
 
 # Create global password service instance

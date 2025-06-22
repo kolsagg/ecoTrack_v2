@@ -28,11 +28,13 @@ class _LoyaltyDashboardScreenState
 
   void _loadData() {
     ref.read(loyaltyStatusProvider.notifier).loadLoyaltyStatus();
+    ref.read(loyaltyHistoryProvider.notifier).loadLoyaltyHistory(limit: 10);
   }
 
   @override
   Widget build(BuildContext context) {
     final statusState = ref.watch(loyaltyStatusProvider);
+    final historyState = ref.watch(loyaltyHistoryProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -76,6 +78,11 @@ class _LoyaltyDashboardScreenState
 
                   // Quick Actions
                   _buildQuickActions(),
+
+                  const SizedBox(height: 24),
+
+                  // Recent History
+                  _buildRecentHistory(historyState),
 
                   const SizedBox(height: 24),
                 ],
@@ -405,7 +412,7 @@ class _LoyaltyDashboardScreenState
             _buildTipItem(
               Icons.shopping_cart,
               'Shop More',
-              'Earn 1 point for every ₺1 spent (Valid only for purchases made at partner stores)',
+              'Earn 1 point for every ₺10 spent (Valid only for purchases made at partner stores)',
             ),
             _buildTipItem(
               Icons.category,
@@ -476,5 +483,226 @@ class _LoyaltyDashboardScreenState
         ],
       ),
     );
+  }
+
+  Widget _buildRecentHistory(LoyaltyHistoryState historyState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Transactions',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            if (historyState.history != null &&
+                historyState.history!.success &&
+                historyState.history!.transactions.isNotEmpty)
+              TextButton(
+                onPressed: () => _showFullHistory(),
+                child: Text(
+                  'View All',
+                  style: TextStyle(color: AppConstants.primaryColor),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (historyState.isLoading)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else if (historyState.error != null)
+          _buildHistoryErrorCard(historyState.error!)
+        else if (historyState.history == null ||
+            !historyState.history!.success ||
+            historyState.history!.transactions.isEmpty)
+          _buildNoHistoryCard()
+        else
+          _buildHistoryList(
+            historyState.history!.transactions.take(5).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryList(List<LoyaltyTransaction> transactions) {
+    return Card(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: transactions.length,
+        separatorBuilder: (context, index) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final transaction = transactions[index];
+          return _buildHistoryItem(transaction);
+        },
+      ),
+    );
+  }
+
+  Widget _buildHistoryItem(LoyaltyTransaction transaction) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _getTransactionTypeColor(
+            transaction.transactionType,
+          ).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          _getTransactionTypeIcon(transaction.transactionType),
+          color: _getTransactionTypeColor(transaction.transactionType),
+          size: 20,
+        ),
+      ),
+      title: Text(
+        transaction.merchantName ?? transaction.transactionType.displayName,
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (transaction.category != null)
+            Text(
+              transaction.category!,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
+          Text(
+            DateFormat('MMM dd, yyyy • HH:mm').format(transaction.createdAt),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+          ),
+        ],
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '+${transaction.pointsEarned} pts',
+            style: TextStyle(
+              color: Colors.green[600],
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            '₺${NumberFormat('#,##0.00').format(transaction.transactionAmount)}',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryErrorCard(String error) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
+            const SizedBox(height: 12),
+            Text(
+              'Error Loading History',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref
+                  .read(loyaltyHistoryProvider.notifier)
+                  .loadLoyaltyHistory(limit: 10),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoHistoryCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(Icons.history, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 12),
+            Text(
+              'No Transaction History',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start making purchases to see your transaction history',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getTransactionTypeColor(TransactionType type) {
+    switch (type) {
+      case TransactionType.expense:
+        return Colors.blue;
+      case TransactionType.bonus:
+        return Colors.green;
+      case TransactionType.adjustment:
+        return Colors.orange;
+    }
+  }
+
+  IconData _getTransactionTypeIcon(TransactionType type) {
+    switch (type) {
+      case TransactionType.expense:
+        return Icons.shopping_bag;
+      case TransactionType.bonus:
+        return Icons.card_giftcard;
+      case TransactionType.adjustment:
+        return Icons.tune;
+    }
+  }
+
+  void _showFullHistory() {
+    // Navigate to full history screen
+    Navigator.of(context).pushNamed('/loyalty-history');
   }
 }

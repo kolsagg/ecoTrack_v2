@@ -122,13 +122,7 @@ class BudgetListResponse(BaseModel):
     active_budget: Optional[BudgetResponse] = Field(None, description="Currently active budget")
 
 
-class BudgetSummaryResponse(BaseModel):
-    """Budget summary response"""
-    current_budget: Optional[BudgetResponse] = Field(None, description="Current active budget")
-    monthly_summary: Dict[str, Any] = Field(description="Monthly budget summary")
-    category_performance: List[Dict[str, Any]] = Field(description="Category performance metrics")
-    alerts: List[Dict[str, Any]] = Field(description="Budget alerts and warnings")
-    recommendations: List[Dict[str, Any]] = Field(description="Budget optimization recommendations")
+# Removed duplicate BudgetSummaryResponse - using the one at the end of file
 
 
 class OptimalBudgetRequest(BaseModel):
@@ -178,7 +172,7 @@ class BudgetCategoryUpdate(BaseModel):
 class BudgetCategoryResponse(BaseModel):
     """Schema for budget category response"""
     id: str = Field(description="Budget category ID")
-    user_id: str = Field(description="User ID")
+    user_budget_id: str = Field(description="Monthly budget ID this category belongs to")
     category_id: str = Field(description="Category ID")
     category_name: str = Field(description="Category name")
     monthly_limit: float = Field(description="Monthly budget limit")
@@ -188,14 +182,28 @@ class BudgetCategoryResponse(BaseModel):
 
 
 class UserBudgetCreate(BaseModel):
-    """Schema for creating user's overall budget"""
+    """Schema for creating user's monthly budget"""
     total_monthly_budget: float = Field(gt=0, description="Total monthly budget amount")
     currency: str = Field(default="TRY", description="Budget currency")
     auto_allocate: bool = Field(default=True, description="Whether to auto-allocate budget to categories")
+    year: Optional[int] = Field(None, ge=2020, le=2100, description="Budget year (defaults to current year)")
+    month: Optional[int] = Field(None, ge=1, le=12, description="Budget month (defaults to current month)")
+    
+    @validator('year')
+    def validate_year(cls, v):
+        if v is not None and (v < 2020 or v > 2100):
+            raise ValueError('Year must be between 2020 and 2100')
+        return v
+    
+    @validator('month')
+    def validate_month(cls, v):
+        if v is not None and (v < 1 or v > 12):
+            raise ValueError('Month must be between 1 and 12')
+        return v
 
 
 class UserBudgetUpdate(BaseModel):
-    """Schema for updating user's overall budget"""
+    """Schema for updating user's monthly budget"""
     total_monthly_budget: Optional[float] = Field(None, gt=0, description="Total monthly budget amount")
     currency: Optional[str] = Field(None, description="Budget currency")
     auto_allocate: Optional[bool] = Field(None, description="Whether to auto-allocate budget to categories")
@@ -208,6 +216,8 @@ class UserBudgetResponse(BaseModel):
     total_monthly_budget: float = Field(description="Total monthly budget")
     currency: str = Field(description="Budget currency")
     auto_allocate: bool = Field(description="Auto-allocation setting")
+    year: int = Field(description="Budget year")
+    month: int = Field(description="Budget month")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
 
@@ -216,6 +226,8 @@ class BudgetAllocationRequest(BaseModel):
     """Schema for budget allocation request"""
     total_budget: float = Field(gt=0, description="Total budget to allocate")
     categories: Optional[List[str]] = Field(None, description="Specific categories to allocate to")
+    year: Optional[int] = Field(None, ge=2020, le=2100, description="Budget year (defaults to current year)")
+    month: Optional[int] = Field(None, ge=1, le=12, description="Budget month (defaults to current month)")
 
 
 class BudgetAllocationResponse(BaseModel):
@@ -223,13 +235,17 @@ class BudgetAllocationResponse(BaseModel):
     total_budget: float = Field(description="Total budget amount")
     allocations: List[Dict[str, Any]] = Field(description="Budget allocations per category")
     allocation_method: str = Field(description="Method used for allocation")
+    year: int = Field(description="Budget year")
+    month: int = Field(description="Budget month")
     generated_at: datetime = Field(description="Allocation generation timestamp")
 
 
 class BudgetSummaryResponse(BaseModel):
     """Schema for budget summary response"""
-    user_budget: UserBudgetResponse = Field(description="User's overall budget")
+    user_budget: UserBudgetResponse = Field(description="User's monthly budget")
     category_budgets: List[BudgetCategoryResponse] = Field(description="Category-wise budgets")
     total_allocated: float = Field(description="Total allocated amount")
     remaining_budget: float = Field(description="Remaining unallocated budget")
-    allocation_percentage: float = Field(description="Percentage of budget allocated") 
+    allocation_percentage: float = Field(description="Percentage of budget allocated")
+    year: int = Field(description="Budget year")
+    month: int = Field(description="Budget month") 

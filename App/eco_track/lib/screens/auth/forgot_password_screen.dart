@@ -41,7 +41,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Password reset email sent successfully'),
+            content: const Text(
+              'If this email address is registered in our system, a password reset link will be sent',
+            ),
             backgroundColor: AppConstants.successColor,
           ),
         );
@@ -65,11 +67,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
         // Hata tipine göre özel mesajlar
         final errorString = next.error!.toLowerCase();
-        if (errorString.contains('user not found') ||
-            errorString.contains('email not found') ||
-            errorString.contains('404')) {
-          errorMessage = 'No user found with this email address';
-        } else if (errorString.contains('invalid email')) {
+        if (errorString.contains('invalid email')) {
           errorMessage = 'Invalid email address';
         } else if (errorString.contains('too many requests') ||
             errorString.contains('429')) {
@@ -163,7 +161,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     // Description
                     Text(
                       _emailSent
-                          ? 'We\'ve sent a password reset link to ${_emailController.text.trim()}'
+                          ? 'If ${_emailController.text.trim()} is registered in our system, you will receive a password reset link shortly.'
                           : 'Don\'t worry! Enter your email address and we\'ll send you a link to reset your password.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -204,18 +202,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       ),
                     ] else ...[
                       // Success actions
-                      CustomButton(
-                        text: 'Resend Email',
-                        onPressed: () {
-                          setState(() {
-                            _emailSent = false;
-                          });
-                        },
-                        isOutlined: true,
-                      ),
-
-                      const SizedBox(height: AppConstants.spacingMedium),
-
                       CustomButton(
                         text: 'Back to Login',
                         onPressed: () {
