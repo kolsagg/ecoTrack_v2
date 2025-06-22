@@ -12,15 +12,21 @@ class BudgetManagementScreen extends ConsumerStatefulWidget {
   const BudgetManagementScreen({super.key});
 
   @override
-  ConsumerState<BudgetManagementScreen> createState() => _BudgetManagementScreenState();
+  ConsumerState<BudgetManagementScreen> createState() =>
+      _BudgetManagementScreenState();
 }
 
-class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen> {
+class _BudgetManagementScreenState
+    extends ConsumerState<BudgetManagementScreen> {
   @override
   void initState() {
     super.initState();
     // Load user budget on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('🏠 BudgetManagementScreen: Initializing for current month');
+      // Her zaman current month'a set et
+      ref.read(selectedDateProvider.notifier).goToCurrentMonth();
+      // Current month için budget'ı yükle
       ref.read(userBudgetProvider.notifier).loadUserBudget();
     });
   }
@@ -28,6 +34,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
   @override
   Widget build(BuildContext context) {
     final userBudgetState = ref.watch(userBudgetProvider);
+    final selectedDate = ref.watch(selectedDateProvider).selectedDate;
+    final currentBudget = userBudgetState.budgetForDate(selectedDate);
+    final isLoadingBudget = userBudgetState.isLoadingForDate(selectedDate);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -41,12 +50,13 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
           backgroundColor: AppConstants.primaryColor,
           foregroundColor: Colors.white,
           actions: [
-            if (userBudgetState.budget != null)
+            if (currentBudget != null)
               IconButton(
                 onPressed: () async {
                   final result = await Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const BudgetSetupScreen(isEdit: true),
+                      builder: (context) =>
+                          const BudgetSetupScreen(isEdit: true),
                     ),
                   );
                   // Budget güncellenirse state'i yenile
@@ -60,7 +70,7 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
           ],
         ),
         body: LoadingOverlay(
-          isLoading: userBudgetState.isLoading && userBudgetState.budget == null,
+          isLoading: isLoadingBudget && currentBudget == null,
           loadingText: 'Loading budget...',
           child: _buildBody(userBudgetState),
         ),
@@ -69,35 +79,49 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
   }
 
   Widget _buildBody(UserBudgetState userBudgetState) {
-    // Loading state
-    if (userBudgetState.isLoading && userBudgetState.budget == null) {
-      return const SizedBox.shrink(); // LoadingOverlay handles this
+    final selectedDate = ref.watch(selectedDateProvider).selectedDate;
+    final now = DateTime.now();
+    final isCurrentMonth =
+        selectedDate.year == now.year && selectedDate.month == now.month;
+
+    final currentBudget = userBudgetState.budgetForDate(selectedDate);
+    final currentError = userBudgetState.errorForDate(selectedDate);
+    final isLoadingBudget = userBudgetState.isLoadingForDate(selectedDate);
+
+    // Yükleniyor durumunda overlay gösterilecek
+    if (isLoadingBudget && currentBudget == null) {
+      return const SizedBox.shrink();
     }
 
-    // Budget exists - show overview
-    if (userBudgetState.budget != null) {
+    // Herhangi bir ay için bütçe varsa, her zaman overview'ı göster.
+    if (currentBudget != null) {
       return const BudgetOverviewScreen();
     }
 
-    // No budget (either null or 404 error) - show create budget screen directly
-    if (userBudgetState.budget == null) {
-      // Clear any "not found" errors since we're handling this case
-      if (userBudgetState.error != null && 
-          (userBudgetState.error!.contains('404') || 
-           userBudgetState.error!.toLowerCase().contains('not found') ||
-           userBudgetState.error!.toLowerCase().contains('budget'))) {
-        // Clear the error since we're showing the appropriate screen
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(userBudgetProvider.notifier).clearError();
-        });
+    // Bütçe null ise ne göstereceğimize karar verelim.
+    if (currentBudget == null) {
+      // Eğer seçili ay, içinde bulunduğumuz ay ise, bütçe yok demektir.
+      // Bu durumda budget setup ekranını göster.
+      if (isCurrentMonth) {
+        // "Not found" hatasını temizleyelim çünkü doğru ekrana yönlendiriyoruz.
+        if (currentError != null &&
+            (currentError.contains('404') ||
+                currentError.toLowerCase().contains('not found'))) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(userBudgetProvider.notifier).clearError();
+          });
+        }
+        return const BudgetSetupScreen(isEdit: false);
+      } else {
+        // Eğer farklı bir ay seçildiyse ve bütçe yoksa, overview ekranında kal.
+        // Overview ekranı kendi içinde "bütçe yok" mesajını gösterecektir.
+        return const BudgetOverviewScreen();
       }
-      // Direkt budget setup ekranını göster
-      return const BudgetSetupScreen(isEdit: false);
     }
 
-    // Other errors - show error state
-    if (userBudgetState.error != null) {
-      return _buildErrorState(userBudgetState.error!);
+    // Diğer hataları (örn: 500 sunucu hatası) göster.
+    if (currentError != null) {
+      return _buildErrorState(currentError);
     }
 
     return const SizedBox.shrink();
@@ -110,11 +134,7 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[400],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
             const SizedBox(height: 16),
             Text(
               'Error Loading Budget',
@@ -127,9 +147,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             Text(
               error,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -148,4 +168,4 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
       ),
     );
   }
-} 
+}

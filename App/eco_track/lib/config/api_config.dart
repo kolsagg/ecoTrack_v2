@@ -64,8 +64,10 @@ class ApiConfig {
   static const String reportsHealthEndpoint = '/api/v1/reports/health';
   static const String categoryDistributionEndpoint =
       '/api/v1/reports/category-distribution';
-  static const String budgetVsActualEndpoint = '/api/v1/reports/budget-vs-actual';
-  static const String spendingTrendsEndpoint = '/api/v1/reports/spending-trends';
+  static const String budgetVsActualEndpoint =
+      '/api/v1/reports/budget-vs-actual';
+  static const String spendingTrendsEndpoint =
+      '/api/v1/reports/spending-trends';
   static const String exportReportsEndpoint = '/api/v1/reports/export';
 
   // Loyalty endpoints
@@ -85,6 +87,7 @@ class ApiConfig {
   static const String budgetSummaryEndpoint = '/api/v1/budget/summary';
   static const String budgetApplyAllocationEndpoint =
       '/api/v1/budget/apply-allocation';
+  static const String budgetListEndpoint = '/api/v1/budget/list';
   static const String budgetHealthEndpoint = '/api/v1/budget/health';
 
   // Reviews endpoints

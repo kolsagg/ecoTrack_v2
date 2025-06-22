@@ -11,11 +11,15 @@ class UserBudgetCreateRequest extends Equatable {
   final String currency;
   @JsonKey(name: 'auto_allocate')
   final bool autoAllocate;
+  final int? year;
+  final int? month;
 
   const UserBudgetCreateRequest({
     required this.totalMonthlyBudget,
     this.currency = 'TRY',
     this.autoAllocate = true,
+    this.year,
+    this.month,
   });
 
   factory UserBudgetCreateRequest.fromJson(Map<String, dynamic> json) =>
@@ -23,7 +27,13 @@ class UserBudgetCreateRequest extends Equatable {
   Map<String, dynamic> toJson() => _$UserBudgetCreateRequestToJson(this);
 
   @override
-  List<Object?> get props => [totalMonthlyBudget, currency, autoAllocate];
+  List<Object?> get props => [
+    totalMonthlyBudget,
+    currency,
+    autoAllocate,
+    year,
+    month,
+  ];
 }
 
 // User Budget Update Request
@@ -34,11 +44,15 @@ class UserBudgetUpdateRequest extends Equatable {
   final String? currency;
   @JsonKey(name: 'auto_allocate')
   final bool? autoAllocate;
+  final int? year;
+  final int? month;
 
   const UserBudgetUpdateRequest({
     this.totalMonthlyBudget,
     this.currency,
     this.autoAllocate,
+    this.year,
+    this.month,
   });
 
   factory UserBudgetUpdateRequest.fromJson(Map<String, dynamic> json) =>
@@ -46,7 +60,13 @@ class UserBudgetUpdateRequest extends Equatable {
   Map<String, dynamic> toJson() => _$UserBudgetUpdateRequestToJson(this);
 
   @override
-  List<Object?> get props => [totalMonthlyBudget, currency, autoAllocate];
+  List<Object?> get props => [
+    totalMonthlyBudget,
+    currency,
+    autoAllocate,
+    year,
+    month,
+  ];
 }
 
 // User Budget Response
@@ -60,6 +80,8 @@ class UserBudget extends Equatable {
   final String currency;
   @JsonKey(name: 'auto_allocate')
   final bool autoAllocate;
+  final int year;
+  final int month;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -71,6 +93,8 @@ class UserBudget extends Equatable {
     required this.totalMonthlyBudget,
     required this.currency,
     required this.autoAllocate,
+    required this.year,
+    required this.month,
     required this.createdAt,
     this.updatedAt,
   });
@@ -86,6 +110,8 @@ class UserBudget extends Equatable {
     totalMonthlyBudget,
     currency,
     autoAllocate,
+    year,
+    month,
     createdAt,
     updatedAt,
   ];
@@ -119,8 +145,8 @@ class BudgetCategoryCreateRequest extends Equatable {
 @JsonSerializable()
 class BudgetCategory extends Equatable {
   final String id;
-  @JsonKey(name: 'user_id')
-  final String userId;
+  @JsonKey(name: 'user_budget_id')
+  final String userBudgetId;
   @JsonKey(name: 'category_id')
   final String categoryId;
   @JsonKey(name: 'category_name')
@@ -136,7 +162,7 @@ class BudgetCategory extends Equatable {
 
   const BudgetCategory({
     required this.id,
-    required this.userId,
+    required this.userBudgetId,
     required this.categoryId,
     required this.categoryName,
     required this.monthlyLimit,
@@ -152,7 +178,7 @@ class BudgetCategory extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    userId,
+    userBudgetId,
     categoryId,
     categoryName,
     monthlyLimit,
@@ -259,6 +285,8 @@ class BudgetSummaryResponse extends Equatable {
   final int categoriesOverBudget;
   @JsonKey(name: 'category_summaries')
   final List<BudgetSummaryItem> categorySummaries;
+  final int year;
+  final int month;
 
   const BudgetSummaryResponse({
     this.totalMonthlyBudget = 0.0,
@@ -270,10 +298,13 @@ class BudgetSummaryResponse extends Equatable {
     this.spendingPercentage = 0.0,
     this.categoriesOverBudget = 0,
     this.categorySummaries = const [],
+    required this.year,
+    required this.month,
   });
 
   factory BudgetSummaryResponse.fromJson(Map<String, dynamic> json) {
     try {
+      final now = DateTime.now();
       return BudgetSummaryResponse(
         totalMonthlyBudget:
             (json['total_monthly_budget'] as num?)?.toDouble() ?? 0.0,
@@ -296,6 +327,8 @@ class BudgetSummaryResponse extends Equatable {
                 )
                 .toList() ??
             [],
+        year: (json['year'] as int?) ?? now.year,
+        month: (json['month'] as int?) ?? now.month,
       );
     } catch (e) {
       print('❌ Error parsing BudgetSummaryResponse: $e');
@@ -317,6 +350,8 @@ class BudgetSummaryResponse extends Equatable {
     spendingPercentage,
     categoriesOverBudget,
     categorySummaries,
+    year,
+    month,
   ];
 }
 
@@ -326,8 +361,15 @@ class BudgetAllocationRequest extends Equatable {
   @JsonKey(name: 'total_budget')
   final double totalBudget;
   final List<String>? categories;
+  final int? year;
+  final int? month;
 
-  const BudgetAllocationRequest({required this.totalBudget, this.categories});
+  const BudgetAllocationRequest({
+    required this.totalBudget,
+    this.categories,
+    this.year,
+    this.month,
+  });
 
   factory BudgetAllocationRequest.fromJson(Map<String, dynamic> json) {
     try {
@@ -336,6 +378,8 @@ class BudgetAllocationRequest extends Equatable {
         categories: (json['categories'] as List<dynamic>?)
             ?.map((e) => e as String)
             .toList(),
+        year: json['year'] as int?,
+        month: json['month'] as int?,
       );
     } catch (e) {
       print('❌ Error parsing BudgetAllocationRequest: $e');
@@ -347,7 +391,7 @@ class BudgetAllocationRequest extends Equatable {
   Map<String, dynamic> toJson() => _$BudgetAllocationRequestToJson(this);
 
   @override
-  List<Object?> get props => [totalBudget, categories];
+  List<Object?> get props => [totalBudget, categories, year, month];
 }
 
 // Budget Allocation Item
@@ -403,16 +447,21 @@ class BudgetAllocationResponse extends Equatable {
   final double totalAllocated;
   final List<BudgetAllocationItem> allocations;
   final String message;
+  final int year;
+  final int month;
 
   const BudgetAllocationResponse({
     this.totalBudget = 0.0,
     this.totalAllocated = 0.0,
     this.allocations = const [],
     this.message = '',
+    required this.year,
+    required this.month,
   });
 
   factory BudgetAllocationResponse.fromJson(Map<String, dynamic> json) {
     try {
+      final now = DateTime.now();
       return BudgetAllocationResponse(
         totalBudget: (json['total_budget'] as num?)?.toDouble() ?? 0.0,
         totalAllocated: (json['total_allocated'] as num?)?.toDouble() ?? 0.0,
@@ -426,6 +475,8 @@ class BudgetAllocationResponse extends Equatable {
                 .toList() ??
             [],
         message: json['message'] as String? ?? '',
+        year: (json['year'] as int?) ?? now.year,
+        month: (json['month'] as int?) ?? now.month,
       );
     } catch (e) {
       print('❌ Error parsing BudgetAllocationResponse: $e');
@@ -441,6 +492,8 @@ class BudgetAllocationResponse extends Equatable {
     totalAllocated,
     allocations,
     message,
+    year,
+    month,
   ];
 }
 
@@ -465,4 +518,61 @@ class BudgetHealthResponse extends Equatable {
 
   @override
   List<Object?> get props => [status, service, timestamp, version];
+}
+
+// Yeni model: Budget List Response
+@JsonSerializable()
+class BudgetListResponse extends Equatable {
+  final List<UserBudget> budgets;
+  final int count;
+  final int page;
+  final int limit;
+  @JsonKey(name: 'has_next')
+  final bool hasNext;
+  @JsonKey(name: 'has_previous')
+  final bool hasPrevious;
+
+  const BudgetListResponse({
+    this.budgets = const [],
+    this.count = 0,
+    this.page = 1,
+    this.limit = 12,
+    this.hasNext = false,
+    this.hasPrevious = false,
+  });
+
+  factory BudgetListResponse.fromJson(Map<String, dynamic> json) {
+    try {
+      return BudgetListResponse(
+        budgets:
+            (json['budgets'] as List<dynamic>?)
+                ?.map(
+                  (item) => UserBudget.fromJson(item as Map<String, dynamic>),
+                )
+                .toList() ??
+            [],
+        count: (json['count'] as int?) ?? 0,
+        page: (json['page'] as int?) ?? 1,
+        limit: (json['limit'] as int?) ?? 12,
+        hasNext: json['has_next'] as bool? ?? false,
+        hasPrevious: json['has_previous'] as bool? ?? false,
+      );
+    } catch (e) {
+      print('❌ Error parsing BudgetListResponse: $e');
+      print('📄 JSON data: $json');
+      rethrow;
+    }
+  }
+
+  Map<String, dynamic> toJson() => _$BudgetListResponseToJson(this);
+
+  @override
+  List<Object?> get props => [
+    budgets,
+    count,
+    page,
+    limit,
+    hasNext,
+    hasPrevious,
+  ];
 }

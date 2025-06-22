@@ -12,6 +12,8 @@ UserBudgetCreateRequest _$UserBudgetCreateRequestFromJson(
   totalMonthlyBudget: (json['total_monthly_budget'] as num).toDouble(),
   currency: json['currency'] as String? ?? 'TRY',
   autoAllocate: json['auto_allocate'] as bool? ?? true,
+  year: (json['year'] as num?)?.toInt(),
+  month: (json['month'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$UserBudgetCreateRequestToJson(
@@ -20,6 +22,8 @@ Map<String, dynamic> _$UserBudgetCreateRequestToJson(
   'total_monthly_budget': instance.totalMonthlyBudget,
   'currency': instance.currency,
   'auto_allocate': instance.autoAllocate,
+  'year': instance.year,
+  'month': instance.month,
 };
 
 UserBudgetUpdateRequest _$UserBudgetUpdateRequestFromJson(
@@ -28,6 +32,8 @@ UserBudgetUpdateRequest _$UserBudgetUpdateRequestFromJson(
   totalMonthlyBudget: (json['total_monthly_budget'] as num?)?.toDouble(),
   currency: json['currency'] as String?,
   autoAllocate: json['auto_allocate'] as bool?,
+  year: (json['year'] as num?)?.toInt(),
+  month: (json['month'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$UserBudgetUpdateRequestToJson(
@@ -36,6 +42,8 @@ Map<String, dynamic> _$UserBudgetUpdateRequestToJson(
   'total_monthly_budget': instance.totalMonthlyBudget,
   'currency': instance.currency,
   'auto_allocate': instance.autoAllocate,
+  'year': instance.year,
+  'month': instance.month,
 };
 
 UserBudget _$UserBudgetFromJson(Map<String, dynamic> json) => UserBudget(
@@ -44,6 +52,8 @@ UserBudget _$UserBudgetFromJson(Map<String, dynamic> json) => UserBudget(
   totalMonthlyBudget: (json['total_monthly_budget'] as num).toDouble(),
   currency: json['currency'] as String,
   autoAllocate: json['auto_allocate'] as bool,
+  year: (json['year'] as num).toInt(),
+  month: (json['month'] as num).toInt(),
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: json['updated_at'] == null
       ? null
@@ -57,6 +67,8 @@ Map<String, dynamic> _$UserBudgetToJson(UserBudget instance) =>
       'total_monthly_budget': instance.totalMonthlyBudget,
       'currency': instance.currency,
       'auto_allocate': instance.autoAllocate,
+      'year': instance.year,
+      'month': instance.month,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
     };
@@ -80,7 +92,7 @@ Map<String, dynamic> _$BudgetCategoryCreateRequestToJson(
 BudgetCategory _$BudgetCategoryFromJson(Map<String, dynamic> json) =>
     BudgetCategory(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      userBudgetId: json['user_budget_id'] as String,
       categoryId: json['category_id'] as String,
       categoryName: json['category_name'] as String,
       monthlyLimit: (json['monthly_limit'] as num).toDouble(),
@@ -94,7 +106,7 @@ BudgetCategory _$BudgetCategoryFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$BudgetCategoryToJson(BudgetCategory instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'user_id': instance.userId,
+      'user_budget_id': instance.userBudgetId,
       'category_id': instance.categoryId,
       'category_name': instance.categoryName,
       'monthly_limit': instance.monthlyLimit,
@@ -154,6 +166,8 @@ BudgetSummaryResponse _$BudgetSummaryResponseFromJson(
           ?.map((e) => BudgetSummaryItem.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  year: (json['year'] as num).toInt(),
+  month: (json['month'] as num).toInt(),
 );
 
 Map<String, dynamic> _$BudgetSummaryResponseToJson(
@@ -168,6 +182,8 @@ Map<String, dynamic> _$BudgetSummaryResponseToJson(
   'spending_percentage': instance.spendingPercentage,
   'categories_over_budget': instance.categoriesOverBudget,
   'category_summaries': instance.categorySummaries,
+  'year': instance.year,
+  'month': instance.month,
 };
 
 BudgetAllocationRequest _$BudgetAllocationRequestFromJson(
@@ -177,6 +193,8 @@ BudgetAllocationRequest _$BudgetAllocationRequestFromJson(
   categories: (json['categories'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
+  year: (json['year'] as num?)?.toInt(),
+  month: (json['month'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$BudgetAllocationRequestToJson(
@@ -184,6 +202,8 @@ Map<String, dynamic> _$BudgetAllocationRequestToJson(
 ) => <String, dynamic>{
   'total_budget': instance.totalBudget,
   'categories': instance.categories,
+  'year': instance.year,
+  'month': instance.month,
 };
 
 BudgetAllocationItem _$BudgetAllocationItemFromJson(
@@ -215,6 +235,8 @@ BudgetAllocationResponse _$BudgetAllocationResponseFromJson(
           .toList() ??
       const [],
   message: json['message'] as String? ?? '',
+  year: (json['year'] as num).toInt(),
+  month: (json['month'] as num).toInt(),
 );
 
 Map<String, dynamic> _$BudgetAllocationResponseToJson(
@@ -224,6 +246,8 @@ Map<String, dynamic> _$BudgetAllocationResponseToJson(
   'total_allocated': instance.totalAllocated,
   'allocations': instance.allocations,
   'message': instance.message,
+  'year': instance.year,
+  'month': instance.month,
 };
 
 BudgetHealthResponse _$BudgetHealthResponseFromJson(
@@ -243,3 +267,27 @@ Map<String, dynamic> _$BudgetHealthResponseToJson(
   'timestamp': instance.timestamp.toIso8601String(),
   'version': instance.version,
 };
+
+BudgetListResponse _$BudgetListResponseFromJson(Map<String, dynamic> json) =>
+    BudgetListResponse(
+      budgets:
+          (json['budgets'] as List<dynamic>?)
+              ?.map((e) => UserBudget.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      limit: (json['limit'] as num?)?.toInt() ?? 12,
+      hasNext: json['has_next'] as bool? ?? false,
+      hasPrevious: json['has_previous'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$BudgetListResponseToJson(BudgetListResponse instance) =>
+    <String, dynamic>{
+      'budgets': instance.budgets,
+      'count': instance.count,
+      'page': instance.page,
+      'limit': instance.limit,
+      'has_next': instance.hasNext,
+      'has_previous': instance.hasPrevious,
+    };

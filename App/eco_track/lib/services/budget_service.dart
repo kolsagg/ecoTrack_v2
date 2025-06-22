@@ -37,16 +37,25 @@ class BudgetService {
   }
 
   // Create User Budget
-  Future<UserBudget> createUserBudget(UserBudgetCreateRequest request) async {
+  Future<UserBudget> createUserBudget(
+    UserBudgetCreateRequest request, {
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       final response = await _dio.post(
         ApiConfig.budgetEndpoint,
         data: request.toJson(),
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -71,15 +80,20 @@ class BudgetService {
   }
 
   // Get User Budget
-  Future<UserBudget?> getUserBudget() async {
+  Future<UserBudget?> getUserBudget({int? year, int? month}) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       final response = await _dio.get(
         ApiConfig.budgetEndpoint,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -112,16 +126,25 @@ class BudgetService {
   }
 
   // Update User Budget
-  Future<UserBudget> updateUserBudget(UserBudgetUpdateRequest request) async {
+  Future<UserBudget> updateUserBudget(
+    UserBudgetUpdateRequest request, {
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       final response = await _dio.put(
         ApiConfig.budgetEndpoint,
         data: request.toJson(),
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -147,17 +170,24 @@ class BudgetService {
 
   // Create Category Budget
   Future<BudgetCategory> createCategoryBudget(
-    BudgetCategoryCreateRequest request,
-  ) async {
+    BudgetCategoryCreateRequest request, {
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       final response = await _dio.post(
         ApiConfig.budgetCategoriesEndpoint,
         data: request.toJson(),
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -178,15 +208,23 @@ class BudgetService {
   }
 
   // Get Category Budgets
-  Future<BudgetCategoriesResponse> getCategoryBudgets() async {
+  Future<BudgetCategoriesResponse> getCategoryBudgets({
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       final response = await _dio.get(
         ApiConfig.budgetCategoriesEndpoint,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -207,16 +245,26 @@ class BudgetService {
   }
 
   // Get Budget Summary
-  Future<BudgetSummaryResponse> getBudgetSummary() async {
+  Future<BudgetSummaryResponse> getBudgetSummary({
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       print('📡 Making request to: ${ApiConfig.budgetSummaryEndpoint}');
+      print('📋 Query params: $queryParams');
+
       final response = await _dio.get(
         ApiConfig.budgetSummaryEndpoint,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -233,7 +281,10 @@ class BudgetService {
             responseData['category_budgets'] as List<dynamic>? ?? [];
 
         // Gerçek spending verilerini al
-        final categorySpendingMap = await getCurrentMonthSpendingByCategory();
+        final categorySpendingMap = await getCurrentMonthSpendingByCategory(
+          year: year,
+          month: month,
+        );
         double totalSpent = categorySpendingMap.values.fold(
           0.0,
           (sum, amount) => sum + amount,
@@ -280,6 +331,7 @@ class BudgetService {
           );
         }).toList();
 
+        final now = DateTime.now();
         return BudgetSummaryResponse(
           totalMonthlyBudget: totalMonthlyBudget,
           totalAllocated:
@@ -296,6 +348,8 @@ class BudgetService {
               .where((item) => item.isOverBudget)
               .length,
           categorySummaries: categorySummaries,
+          year: year ?? now.year,
+          month: month ?? now.month,
         );
       } else {
         // Eski format için fallback
@@ -322,22 +376,30 @@ class BudgetService {
 
   // Apply Budget Allocation
   Future<BudgetAllocationResponse> applyBudgetAllocation(
-    BudgetAllocationRequest request,
-  ) async {
+    BudgetAllocationRequest request, {
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       print(
         '📡 Making allocation request to: ${ApiConfig.budgetApplyAllocationEndpoint}',
       );
       print('📄 Request data: ${request.toJson()}');
+      print('📋 Query params: $queryParams');
 
       final response = await _dio.post(
         ApiConfig.budgetApplyAllocationEndpoint,
         data: request.toJson(),
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
@@ -366,16 +428,70 @@ class BudgetService {
     }
   }
 
-  // Delete Category Budget
-  Future<void> deleteCategoryBudget(String categoryId) async {
+  // Get Budget List (Yeni method)
+  Future<BudgetListResponse> getBudgetList({
+    int limit = 12,
+    int offset = 0,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
         throw const AuthException('Token not found');
       }
 
+      final queryParams = <String, dynamic>{'limit': limit, 'offset': offset};
+
+      print('📡 Making request to: ${ApiConfig.budgetListEndpoint}');
+      print('📋 Query params: $queryParams');
+
+      final response = await _dio.get(
+        ApiConfig.budgetListEndpoint,
+        queryParameters: queryParams,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      print('✅ Budget List Response status: ${response.statusCode}');
+      print('📄 Budget List Response data: ${response.data}');
+
+      return BudgetListResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      print(
+        '❌ Budget List DioException: ${e.response?.statusCode} - ${e.response?.data}',
+      );
+      if (e.response != null) {
+        final error = e.response!.data;
+        throw ApiException(
+          error['message'] ?? 'Failed to get budget list',
+          statusCode: e.response!.statusCode ?? 500,
+        );
+      } else {
+        throw NetworkException('Error getting budget list: ${e.message}');
+      }
+    } catch (e) {
+      print('❌ Budget List General error: $e');
+      throw NetworkException('Error getting budget list: $e');
+    }
+  }
+
+  // Delete Category Budget
+  Future<void> deleteCategoryBudget(
+    String categoryId, {
+    int? year,
+    int? month,
+  }) async {
+    try {
+      final token = await _authService.getToken();
+      if (token == null) {
+        throw const AuthException('Token not found');
+      }
+
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
+
       await _dio.delete(
         '${ApiConfig.budgetCategoriesEndpoint}/$categoryId',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
     } on DioException catch (e) {
@@ -394,7 +510,7 @@ class BudgetService {
   }
 
   // Reset All Category Budgets (Delete all user's category budgets)
-  Future<void> resetAllCategoryBudgets() async {
+  Future<void> resetAllCategoryBudgets({int? year, int? month}) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
@@ -402,12 +518,20 @@ class BudgetService {
       }
 
       // First get all category budgets
-      final categoriesResponse = await getCategoryBudgets();
+      final categoriesResponse = await getCategoryBudgets(
+        year: year,
+        month: month,
+      );
+
+      final queryParams = <String, dynamic>{};
+      if (year != null) queryParams['year'] = year;
+      if (month != null) queryParams['month'] = month;
 
       // Delete each category budget
       for (final category in categoriesResponse.categoryBudgets) {
         await _dio.delete(
           '${ApiConfig.budgetCategoriesEndpoint}/${category.categoryId}',
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
       }
@@ -429,7 +553,10 @@ class BudgetService {
   }
 
   // Get current month spending by category using category distribution report
-  Future<Map<String, double>> getCurrentMonthSpendingByCategory() async {
+  Future<Map<String, double>> getCurrentMonthSpendingByCategory({
+    int? year,
+    int? month,
+  }) async {
     try {
       final token = await _authService.getToken();
       if (token == null) {
@@ -437,11 +564,14 @@ class BudgetService {
       }
 
       final now = DateTime.now();
-      print('📊 Fetching category distribution for ${now.year}-${now.month}');
+      final targetYear = year ?? now.year;
+      final targetMonth = month ?? now.month;
+
+      print('📊 Fetching category distribution for $targetYear-$targetMonth');
 
       final request = CategoryDistributionRequest(
-        year: now.year,
-        month: now.month,
+        year: targetYear,
+        month: targetMonth,
         chartType: 'donut',
       );
 
