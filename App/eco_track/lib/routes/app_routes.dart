@@ -27,6 +27,7 @@ import '../screens/profile/settings_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/security_settings_screen.dart';
 import '../screens/ai_recommendations/ai_recommendations_screen.dart';
+import '../screens/reports/monthly_inflation_screen.dart';
 import '../widgets/navigation/main_navigation.dart';
 
 class AppRoutes {
@@ -69,6 +70,9 @@ class AppRoutes {
   // AI Recommendations routes
   static const String aiRecommendations = '/ai-recommendations';
 
+  // Monthly Inflation routes
+  static const String monthlyInflation = '/monthly-inflation';
+
   static Map<String, WidgetBuilder> get routes => {
     login: (context) => const LoginScreen(),
     register: (context) => const RegisterScreen(),
@@ -96,6 +100,7 @@ class AppRoutes {
     adminDashboard: (context) => const AdminDashboardScreen(),
     merchantManagement: (context) => const MerchantManagementScreen(),
     aiRecommendations: (context) => const AiRecommendationsScreen(),
+    monthlyInflation: (context) => const MonthlyInflationScreen(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {

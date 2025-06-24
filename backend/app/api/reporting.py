@@ -178,13 +178,21 @@ async def get_budget_vs_actual(
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        # Get user's category budgets with category names
+        # Get user's budget for this month first
+        user_budget_result = supabase.table("user_budgets").select("id").eq("user_id", current_user["id"]).eq("year", year).eq("month", month).execute()
+        
+        if not user_budget_result.data:
+            raise HTTPException(status_code=404, detail=f"No budget found for {month:02d}/{year}. Please create a budget first.")
+        
+        user_budget_id = user_budget_result.data[0]["id"]
+        
+        # Get user's category budgets with category names using user_budget_id
         budget_result = supabase.table("budget_categories").select(
             "*, categories(name)"
-        ).eq("user_id", current_user["id"]).execute()
+        ).eq("user_budget_id", user_budget_id).eq("is_active", True).execute()
         
         if not budget_result.data:
-            raise HTTPException(status_code=404, detail="No budget data found")
+            raise HTTPException(status_code=404, detail=f"No category budgets found for {month:02d}/{year}")
         
         category_budgets = {}
         for cb in budget_result.data:

@@ -68,6 +68,8 @@ class ApiConfig {
       '/api/v1/reports/budget-vs-actual';
   static const String spendingTrendsEndpoint =
       '/api/v1/reports/spending-trends';
+  static const String monthlyInflationEndpoint =
+      '/api/v1/reports/monthly-inflation';
   static const String exportReportsEndpoint = '/api/v1/reports/export';
 
   // Loyalty endpoints

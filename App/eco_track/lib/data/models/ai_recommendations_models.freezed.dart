@@ -1228,10 +1228,7 @@ mixin _$RecommendationsState {
   List<CategoryAnomalyAlert> get anomalyAlerts =>
       throw _privateConstructorUsedError;
   List<SpendingPatternInsight> get patternInsights =>
-      throw _privateConstructorUsedError; // Cache time fields for performance optimization
-  DateTime? get wastePreventionCacheTime => throw _privateConstructorUsedError;
-  DateTime? get anomalyCacheTime => throw _privateConstructorUsedError;
-  DateTime? get patternCacheTime => throw _privateConstructorUsedError;
+      throw _privateConstructorUsedError;
 
   /// Create a copy of RecommendationsState
   /// with the given fields replaced by the non-null parameter values.
@@ -1259,9 +1256,6 @@ abstract class $RecommendationsStateCopyWith<$Res> {
     List<WastePreventionAlert> wastePreventionAlerts,
     List<CategoryAnomalyAlert> anomalyAlerts,
     List<SpendingPatternInsight> patternInsights,
-    DateTime? wastePreventionCacheTime,
-    DateTime? anomalyCacheTime,
-    DateTime? patternCacheTime,
   });
 
   $RecommendationResponseCopyWith<$Res>? get recommendations;
@@ -1296,9 +1290,6 @@ class _$RecommendationsStateCopyWithImpl<
     Object? wastePreventionAlerts = null,
     Object? anomalyAlerts = null,
     Object? patternInsights = null,
-    Object? wastePreventionCacheTime = freezed,
-    Object? anomalyCacheTime = freezed,
-    Object? patternCacheTime = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1346,18 +1337,6 @@ class _$RecommendationsStateCopyWithImpl<
                 ? _value.patternInsights
                 : patternInsights // ignore: cast_nullable_to_non_nullable
                       as List<SpendingPatternInsight>,
-            wastePreventionCacheTime: freezed == wastePreventionCacheTime
-                ? _value.wastePreventionCacheTime
-                : wastePreventionCacheTime // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
-            anomalyCacheTime: freezed == anomalyCacheTime
-                ? _value.anomalyCacheTime
-                : anomalyCacheTime // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
-            patternCacheTime: freezed == patternCacheTime
-                ? _value.patternCacheTime
-                : patternCacheTime // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
           )
           as $Val,
     );
@@ -1401,9 +1380,6 @@ abstract class _$$RecommendationsStateImplCopyWith<$Res>
     List<WastePreventionAlert> wastePreventionAlerts,
     List<CategoryAnomalyAlert> anomalyAlerts,
     List<SpendingPatternInsight> patternInsights,
-    DateTime? wastePreventionCacheTime,
-    DateTime? anomalyCacheTime,
-    DateTime? patternCacheTime,
   });
 
   @override
@@ -1435,9 +1411,6 @@ class __$$RecommendationsStateImplCopyWithImpl<$Res>
     Object? wastePreventionAlerts = null,
     Object? anomalyAlerts = null,
     Object? patternInsights = null,
-    Object? wastePreventionCacheTime = freezed,
-    Object? anomalyCacheTime = freezed,
-    Object? patternCacheTime = freezed,
   }) {
     return _then(
       _$RecommendationsStateImpl(
@@ -1485,18 +1458,6 @@ class __$$RecommendationsStateImplCopyWithImpl<$Res>
             ? _value._patternInsights
             : patternInsights // ignore: cast_nullable_to_non_nullable
                   as List<SpendingPatternInsight>,
-        wastePreventionCacheTime: freezed == wastePreventionCacheTime
-            ? _value.wastePreventionCacheTime
-            : wastePreventionCacheTime // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
-        anomalyCacheTime: freezed == anomalyCacheTime
-            ? _value.anomalyCacheTime
-            : anomalyCacheTime // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
-        patternCacheTime: freezed == patternCacheTime
-            ? _value.patternCacheTime
-            : patternCacheTime // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
       ),
     );
   }
@@ -1517,9 +1478,6 @@ class _$RecommendationsStateImpl implements _RecommendationsState {
     final List<WastePreventionAlert> wastePreventionAlerts = const [],
     final List<CategoryAnomalyAlert> anomalyAlerts = const [],
     final List<SpendingPatternInsight> patternInsights = const [],
-    this.wastePreventionCacheTime,
-    this.anomalyCacheTime,
-    this.patternCacheTime,
   }) : _wastePreventionAlerts = wastePreventionAlerts,
        _anomalyAlerts = anomalyAlerts,
        _patternInsights = patternInsights;
@@ -1574,17 +1532,9 @@ class _$RecommendationsStateImpl implements _RecommendationsState {
     return EqualUnmodifiableListView(_patternInsights);
   }
 
-  // Cache time fields for performance optimization
-  @override
-  final DateTime? wastePreventionCacheTime;
-  @override
-  final DateTime? anomalyCacheTime;
-  @override
-  final DateTime? patternCacheTime;
-
   @override
   String toString() {
-    return 'RecommendationsState(selectedCategory: $selectedCategory, isLoading: $isLoading, hasError: $hasError, errorMessage: $errorMessage, recommendations: $recommendations, isLoadingWastePrevention: $isLoadingWastePrevention, isLoadingAnomalies: $isLoadingAnomalies, isLoadingPatterns: $isLoadingPatterns, wastePreventionAlerts: $wastePreventionAlerts, anomalyAlerts: $anomalyAlerts, patternInsights: $patternInsights, wastePreventionCacheTime: $wastePreventionCacheTime, anomalyCacheTime: $anomalyCacheTime, patternCacheTime: $patternCacheTime)';
+    return 'RecommendationsState(selectedCategory: $selectedCategory, isLoading: $isLoading, hasError: $hasError, errorMessage: $errorMessage, recommendations: $recommendations, isLoadingWastePrevention: $isLoadingWastePrevention, isLoadingAnomalies: $isLoadingAnomalies, isLoadingPatterns: $isLoadingPatterns, wastePreventionAlerts: $wastePreventionAlerts, anomalyAlerts: $anomalyAlerts, patternInsights: $patternInsights)';
   }
 
   @override
@@ -1622,16 +1572,7 @@ class _$RecommendationsStateImpl implements _RecommendationsState {
             const DeepCollectionEquality().equals(
               other._patternInsights,
               _patternInsights,
-            ) &&
-            (identical(
-                  other.wastePreventionCacheTime,
-                  wastePreventionCacheTime,
-                ) ||
-                other.wastePreventionCacheTime == wastePreventionCacheTime) &&
-            (identical(other.anomalyCacheTime, anomalyCacheTime) ||
-                other.anomalyCacheTime == anomalyCacheTime) &&
-            (identical(other.patternCacheTime, patternCacheTime) ||
-                other.patternCacheTime == patternCacheTime));
+            ));
   }
 
   @override
@@ -1648,9 +1589,6 @@ class _$RecommendationsStateImpl implements _RecommendationsState {
     const DeepCollectionEquality().hash(_wastePreventionAlerts),
     const DeepCollectionEquality().hash(_anomalyAlerts),
     const DeepCollectionEquality().hash(_patternInsights),
-    wastePreventionCacheTime,
-    anomalyCacheTime,
-    patternCacheTime,
   );
 
   /// Create a copy of RecommendationsState
@@ -1679,9 +1617,6 @@ abstract class _RecommendationsState implements RecommendationsState {
     final List<WastePreventionAlert> wastePreventionAlerts,
     final List<CategoryAnomalyAlert> anomalyAlerts,
     final List<SpendingPatternInsight> patternInsights,
-    final DateTime? wastePreventionCacheTime,
-    final DateTime? anomalyCacheTime,
-    final DateTime? patternCacheTime,
   }) = _$RecommendationsStateImpl;
 
   @override
@@ -1705,13 +1640,7 @@ abstract class _RecommendationsState implements RecommendationsState {
   @override
   List<CategoryAnomalyAlert> get anomalyAlerts;
   @override
-  List<SpendingPatternInsight> get patternInsights; // Cache time fields for performance optimization
-  @override
-  DateTime? get wastePreventionCacheTime;
-  @override
-  DateTime? get anomalyCacheTime;
-  @override
-  DateTime? get patternCacheTime;
+  List<SpendingPatternInsight> get patternInsights;
 
   /// Create a copy of RecommendationsState
   /// with the given fields replaced by the non-null parameter values.

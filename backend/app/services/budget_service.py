@@ -41,12 +41,17 @@ class BudgetService:
     async def create_user_budget(self, user_id: str, budget_data: UserBudgetCreate) -> Dict[str, Any]:
         """Create or update user's overall budget"""
         try:
-            # Check if user already has a budget
-            existing_budget = await self.get_user_budget(user_id)
+            # Get current year and month
+            current_date = datetime.now()
+            current_year = current_date.year
+            current_month = current_date.month
+            
+            # Check if user already has a budget for current month
+            existing_budget = await self.get_user_budget(user_id, current_year, current_month)
             
             if existing_budget and existing_budget.get("status") == "success":
                 # Update existing budget
-                return await self.update_user_budget(user_id, UserBudgetUpdate(**budget_data.dict()))
+                return await self.update_user_budget(user_id, UserBudgetUpdate(**budget_data.dict()), current_year, current_month)
             
             # Create new budget
             budget_record = {
@@ -54,6 +59,8 @@ class BudgetService:
                 "total_monthly_budget": budget_data.total_monthly_budget,
                 "currency": budget_data.currency,
                 "auto_allocate": budget_data.auto_allocate,
+                "year": current_year,
+                "month": current_month,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             }
@@ -79,10 +86,16 @@ class BudgetService:
             logger.error(f"Failed to create user budget: {str(e)}")
             return {"status": "error", "message": f"Failed to create budget: {str(e)}"}
     
-    async def get_user_budget(self, user_id: str) -> Dict[str, Any]:
+    async def get_user_budget(self, user_id: str, year: Optional[int] = None, month: Optional[int] = None) -> Dict[str, Any]:
         """Get user's overall budget"""
         try:
-            result = self.supabase.table("user_budgets").select("*").eq("user_id", user_id).execute()
+            # If year and month not provided, use current date
+            if year is None or month is None:
+                current_date = datetime.now()
+                year = year or current_date.year
+                month = month or current_date.month
+            
+            result = self.supabase.table("user_budgets").select("*").eq("user_id", user_id).eq("year", year).eq("month", month).execute()
             
             if not result.data:
                 return {"status": "not_found", "message": "No budget found for user"}
@@ -96,20 +109,26 @@ class BudgetService:
             logger.error(f"Failed to get user budget: {str(e)}")
             return {"status": "error", "message": f"Failed to get budget: {str(e)}"}
     
-    async def update_user_budget(self, user_id: str, budget_data: UserBudgetUpdate) -> Dict[str, Any]:
+    async def update_user_budget(self, user_id: str, budget_data: UserBudgetUpdate, year: Optional[int] = None, month: Optional[int] = None) -> Dict[str, Any]:
         """Update user's overall budget"""
         try:
+            # If year and month not provided, use current date
+            if year is None or month is None:
+                current_date = datetime.now()
+                year = year or current_date.year
+                month = month or current_date.month
+            
             update_data = {k: v for k, v in budget_data.dict().items() if v is not None}
             update_data["updated_at"] = datetime.now().isoformat()
             
-            result = self.supabase.table("user_budgets").update(update_data).eq("user_id", user_id).execute()
+            result = self.supabase.table("user_budgets").update(update_data).eq("user_id", user_id).eq("year", year).eq("month", month).execute()
             
             if not result.data:
                 return {"status": "error", "message": "Failed to update budget"}
             
             # Re-allocate budget if total amount changed and auto_allocate is enabled
             if "total_monthly_budget" in update_data:
-                budget_info = await self.get_user_budget(user_id)
+                budget_info = await self.get_user_budget(user_id, year, month)
                 if budget_info.get("budget", {}).get("auto_allocate", False):
                     await self._auto_allocate_budget(user_id, update_data["total_monthly_budget"])
             
@@ -126,8 +145,15 @@ class BudgetService:
     async def create_category_budget(self, user_id: str, category_data: BudgetCategoryCreate) -> Dict[str, Any]:
         """Create or update budget for a specific category"""
         try:
-            # Check if category budget already exists
-            existing = self.supabase.table("budget_categories").select("*").eq("user_id", user_id).eq("category_id", category_data.category_id).execute()
+            # Get the user's main budget to find the user_budget_id
+            user_budget_res = await self.get_user_budget(user_id)
+            if user_budget_res["status"] != "success":
+                return {"status": "error", "message": "User budget not found"}
+            
+            user_budget_id = user_budget_res["budget"]["id"]
+
+            # Check if category budget already exists for this user_budget_id
+            existing = self.supabase.table("budget_categories").select("*").eq("user_budget_id", user_budget_id).eq("category_id", category_data.category_id).execute()
             
             if existing.data:
                 # Update existing
@@ -142,7 +168,7 @@ class BudgetService:
             else:
                 # Create new
                 budget_record = {
-                    "user_id": user_id,
+                    "user_budget_id": user_budget_id,
                     "category_id": category_data.category_id,
                     "monthly_limit": category_data.monthly_limit,
                     "is_active": category_data.is_active,
@@ -169,15 +195,28 @@ class BudgetService:
     async def get_category_budgets(self, user_id: str) -> Dict[str, Any]:
         """Get all category budgets for a user"""
         try:
+            # Get current year and month
+            current_date = datetime.now()
+            current_year = current_date.year
+            current_month = current_date.month
+            
+            # First, get the user's budget to join with categories
+            user_budget_res = self.supabase.table("user_budgets").select("id").eq("user_id", user_id).eq("year", current_year).eq("month", current_month).execute()
+            if not user_budget_res.data:
+                return {"status": "not_found", "message": f"User budget not found for {current_year}-{current_month}"}
+            
+            user_budget_id = user_budget_res.data[0]["id"]
+            
+            # Now, get budget categories linked to this user_budget_id
             result = self.supabase.table("budget_categories").select(
                 "*, categories(name)"
-            ).eq("user_id", user_id).eq("is_active", True).execute()
+            ).eq("user_budget_id", user_budget_id).eq("is_active", True).execute()
             
             category_budgets = []
             for item in result.data or []:
                 category_budgets.append({
                     "id": item["id"],
-                    "user_id": item["user_id"],
+                    "user_budget_id": item["user_budget_id"],
                     "category_id": item["category_id"],
                     "category_name": item.get("categories", {}).get("name", "Unknown") if item.get("categories") else "Unknown",
                     "monthly_limit": item["monthly_limit"],

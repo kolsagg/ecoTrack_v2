@@ -7,11 +7,9 @@ class ReportsService {
   final AuthService _authService;
   final Dio _dio;
 
-  ReportsService({
-    required AuthService authService,
-    required Dio dio,
-  }) : _authService = authService,
-       _dio = dio;
+  ReportsService({required AuthService authService, required Dio dio})
+    : _authService = authService,
+      _dio = dio;
 
   // Get Category Distribution
   Future<CategoryDistributionResponse> getCategoryDistribution({
@@ -34,11 +32,7 @@ class ReportsService {
       final response = await _dio.post(
         '/api/v1/reports/category-distribution',
         data: request.toJson(),
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return CategoryDistributionResponse.fromJson(response.data);
@@ -50,7 +44,9 @@ class ReportsService {
           statusCode: e.response!.statusCode ?? 500,
         );
       } else {
-        throw NetworkException('Error fetching category distribution: ${e.message}');
+        throw NetworkException(
+          'Error fetching category distribution: ${e.message}',
+        );
       }
     } catch (e) {
       throw NetworkException('Error fetching category distribution: $e');
@@ -76,11 +72,7 @@ class ReportsService {
       final response = await _dio.post(
         '/api/v1/reports/spending-trends',
         data: request.toJson(),
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return SpendingTrendsResponse.fromJson(response.data);
@@ -120,11 +112,7 @@ class ReportsService {
       final response = await _dio.post(
         '/api/v1/reports/budget-vs-actual',
         data: request.toJson(),
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return BudgetVsActualResponse.fromJson(response.data);
@@ -157,7 +145,8 @@ class ReportsService {
       };
 
       if (request.dateRange != null) {
-        queryParams['start_date'] = request.dateRange!.startDate.toIso8601String();
+        queryParams['start_date'] = request.dateRange!.startDate
+            .toIso8601String();
         queryParams['end_date'] = request.dateRange!.endDate.toIso8601String();
       }
 
@@ -170,11 +159,7 @@ class ReportsService {
       final response = await _dio.get(
         '/api/v1/reports/export',
         queryParameters: queryParams,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       // Return the raw response data as string (CSV or JSON)
@@ -198,6 +183,4 @@ class ReportsService {
       throw NetworkException('Error exporting report: $e');
     }
   }
-
-
-} 
+}

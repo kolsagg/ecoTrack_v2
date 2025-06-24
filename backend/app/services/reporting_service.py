@@ -116,7 +116,9 @@ class ReportingService:
             # Get user's category budgets
             budget_result = await self.budget_service.get_category_budgets(user_id)
             if budget_result["status"] != "success":
-                return {"error": "No budget data found"}
+                if budget_result["status"] == "not_found":
+                    return {"error": f"Bütçe bulunamadı. Lütfen önce {self.month_names[month]} {year} için bir bütçe oluşturun."}
+                return {"error": f"Bütçe verisi alınamadı: {budget_result.get('message', 'Bilinmeyen hata')}"}
             
             category_budgets = {cb["category_id"]: cb for cb in budget_result["category_budgets"]}
             
