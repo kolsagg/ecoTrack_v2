@@ -29,12 +29,14 @@ class ApiService {
         },
         onError: (error, handler) {
           final exception = _handleError(error);
-          handler.reject(DioException(
-            requestOptions: error.requestOptions,
-            error: exception,
-            type: error.type,
-            response: error.response,
-          ));
+          handler.reject(
+            DioException(
+              requestOptions: error.requestOptions,
+              error: exception,
+              type: error.type,
+              response: error.response,
+            ),
+          );
         },
       ),
     );
@@ -145,7 +147,9 @@ class ApiService {
 
   // Set auth token
   void setAuthToken(String token) {
-    _dio.options.headers[ApiConfig.authHeaderKey] = ApiConfig.authHeaderValue(token);
+    _dio.options.headers[ApiConfig.authHeaderKey] = ApiConfig.authHeaderValue(
+      token,
+    );
   }
 
   // Remove auth token
@@ -159,22 +163,30 @@ class ApiService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return NetworkException('Connection timeout. Please check your internet connection.');
-      
+        return NetworkException(
+          'Connection timeout. Please check your internet connection.',
+        );
+
       case DioExceptionType.badResponse:
         return _handleResponseError(error);
-      
+
       case DioExceptionType.cancel:
         return NetworkException('Request was cancelled.');
-      
+
       case DioExceptionType.connectionError:
-        return NetworkException('No internet connection. Please check your network settings.');
-      
+        return NetworkException(
+          'No internet connection. Please check your network settings.',
+        );
+
       case DioExceptionType.badCertificate:
         return NetworkException('Certificate verification failed.');
-      
+
       case DioExceptionType.unknown:
-        return NetworkException('An unexpected error occurred. Please try again.');
+        final errorMessage = error.message ?? 'No message';
+        final innerError = error.error?.toString() ?? 'No inner error';
+        return NetworkException(
+          'An unexpected error occurred. Details: $errorMessage. Inner error: $innerError. Please try again.',
+        );
     }
   }
 
@@ -184,37 +196,35 @@ class ApiService {
 
     switch (statusCode) {
       case 400:
-        return ValidationException(
-          data?['detail'] ?? 'Invalid request data.',
-        );
-      
+        return ValidationException(data?['detail'] ?? 'Invalid request data.');
+
       case 401:
         return AuthException('Authentication failed. Please login again.');
-      
+
       case 403:
-        return AuthException('Access denied. You don\'t have permission to perform this action.');
-      
+        return AuthException(
+          'Access denied. You don\'t have permission to perform this action.',
+        );
+
       case 404:
         return ApiException('Resource not found.');
-      
+
       case 422:
-        return ValidationException(
-          data?['detail'] ?? 'Validation failed.',
-        );
-      
+        return ValidationException(data?['detail'] ?? 'Validation failed.');
+
       case 429:
         return ApiException('Too many requests. Please try again later.');
-      
+
       case 500:
       case 502:
       case 503:
       case 504:
         return ServerException('Server error. Please try again later.');
-      
+
       default:
         return ApiException(
           data?['detail'] ?? 'An error occurred. Please try again.',
         );
     }
   }
-} 
+}

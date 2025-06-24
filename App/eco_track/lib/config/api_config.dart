@@ -93,6 +93,17 @@ class ApiConfig {
   // Reviews endpoints
   static const String reviewsEndpoint = '/api/v1/reviews';
 
+  // AI Recommendations endpoints
+  static const String recommendationsEndpoint = '/api/v1/recommendations/';
+  static const String wastePreventionEndpoint =
+      '/api/v1/recommendations/waste-prevention';
+  static const String anomalyAlertsEndpoint =
+      '/api/v1/recommendations/anomaly-alerts';
+  static const String patternInsightsEndpoint =
+      '/api/v1/recommendations/pattern-insights';
+  static const String recommendationsHealthEndpoint =
+      '/api/v1/recommendations/health';
+
   // Environment check
   static bool get isDevelopment => _isDevelopment;
   static bool get isProduction => !_isDevelopment;

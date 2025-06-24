@@ -26,6 +26,7 @@ import '../screens/admin/merchant_management_screen.dart';
 import '../screens/profile/settings_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/security_settings_screen.dart';
+import '../screens/ai_recommendations/ai_recommendations_screen.dart';
 import '../widgets/navigation/main_navigation.dart';
 
 class AppRoutes {
@@ -65,6 +66,9 @@ class AppRoutes {
   static const String adminDashboard = '/admin-dashboard';
   static const String merchantManagement = '/merchant-management';
 
+  // AI Recommendations routes
+  static const String aiRecommendations = '/ai-recommendations';
+
   static Map<String, WidgetBuilder> get routes => {
     login: (context) => const LoginScreen(),
     register: (context) => const RegisterScreen(),
@@ -91,6 +95,7 @@ class AppRoutes {
     deviceManagement: (context) => const DeviceManagementScreen(),
     adminDashboard: (context) => const AdminDashboardScreen(),
     merchantManagement: (context) => const MerchantManagementScreen(),
+    aiRecommendations: (context) => const AiRecommendationsScreen(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {

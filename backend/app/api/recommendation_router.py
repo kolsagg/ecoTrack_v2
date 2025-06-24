@@ -159,4 +159,4 @@ async def get_recommendation_health():
             "error": str(e),
             "ai_model_available": False
         }
-        
+ 

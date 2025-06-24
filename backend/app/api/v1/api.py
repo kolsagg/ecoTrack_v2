@@ -34,7 +34,7 @@ api_router.include_router(budget.router, prefix="/budget", tags=["Budget Managem
 api_router.include_router(loyalty.router, prefix="/loyalty", tags=["Loyalty Program"])
 
 # Include device management router
-api_router.include_router(devices.router, prefix="/devices", tags=["Device Management"])
+api_router.include_router(devices.router, prefix="/devices", tags=["Device Management"]) 
 
 # Include AI recommendation router
 api_router.include_router(recommendation_router.router) 

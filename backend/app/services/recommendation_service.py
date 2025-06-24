@@ -120,26 +120,26 @@ class RecommendationService:
     def _calculate_risk_level(self, days_since_purchase: int, shelf_life: int) -> tuple[str, str]:
         """Calculates risk level and generates an alert message based on product age."""
         if shelf_life <= 0:
-            return "low", "Raf ömrü belirlenemedi."
+            return "low", "Shelf life not determined."
 
         if days_since_purchase < 0:
-            return "low", f"Bu ürün henüz yeni."
+            return "low", f"This product is new."
 
         if days_since_purchase >= shelf_life:
             days_expired = days_since_purchase - shelf_life
             if days_expired == 0:
-                return "high", "Bugün son kullanma tarihi! Hemen kontrol edin."
+                return "high", "Today is the expiration date! Please check it."
             else:
-                return "high", f"{days_expired} gün önce son kullanma tarihi geçti. Lütfen kontrol edin."
+                return "high", f"{days_expired} days ago the expiration date has passed. Please check it."
 
         risk_percentage = (days_since_purchase / shelf_life) * 100
 
         if risk_percentage >= 80:
-            return "high", "Son kullanma tarihine çok az kaldı. Bugün veya yarın tüketin."
+            return "high", "Very close to the expiration date. Please consume today or tomorrow."
         elif risk_percentage >= 50:
-            return "medium", "Tazeliğini kaybetmeye başlıyor. Yakında tüketmeyi unutmayın."
+            return "medium", "It's starting to lose freshness. Please don't forget to consume it soon."
         else:
-            return "low", "Hala taze."
+            return "low", "Still fresh."
 
     async def generate_waste_prevention_alerts(self, user_id: str, supabase_client=None) -> List[WastePreventionAlert]:
         """Generate waste prevention alerts for grocery items with Python-based logic."""
@@ -321,7 +321,7 @@ Now, provide the JSON for the product: **"{product_name}"**. Respond ONLY with t
         # Handle division by zero for new spending categories
         if average_spending == 0:
             # New spending category - use a large percentage to indicate "new spending"
-            prompt = f"""You are an expert financial coach specializing in Turkish consumer habits. Analyze this new spending category for a user.
+            prompt = f"""You are an expert financial coach. Analyze this new spending category for a user.
 
 SPENDING DATA:
 - Category: {category}
@@ -337,34 +337,33 @@ YOUR ROLE AS FINANCIAL COACH:
 COACHING GUIDELINES:
 - Think about what "{category}" typically includes and how people can save money in that specific area
 - Be practical and actionable - give concrete steps, not generic advice
-- Consider Turkish market conditions and consumer behavior
 - Make it personal and engaging, not robotic
 
 REQUIRED JSON FORMAT:
 {{
     "anomaly_percentage": 999.0,
     "severity": "moderate",
-    "alert_message": "Yeni harcama alanı tespit edildi: {category} kategorisinde bu ay {current_spending:.0f} TRY harcadınız.",
+    "alert_message": "New spending area detected: you spent {current_spending:.0f} TRY in the {category} category this month.",
     "suggested_action": "[Generate a creative, specific tip for {category} category]"
 }}
 
 EXAMPLES OF GOOD CATEGORY-SPECIFIC TIPS:
-- For "Groceries": "Market alışverişinde tasarruf için haftalık menü planlayıp liste yaparak gereksiz alımları önleyebilirsiniz."
-- For "Transportation": "Ulaşım masraflarını azaltmak için toplu taşıma aylık kartı veya bisiklet kullanımını değerlendirebilirsiniz."
-- For "Shopping": "Alışveriş harcamalarını kontrol etmek için 24 saat kuralını uygulayın - beğendiğiniz ürünü hemen almayın, bir gün bekleyin."
+- For "Groceries": "For grocery shopping, you can save money by planning a weekly menu and making a list to avoid unnecessary purchases."
+- For "Transportation": "To reduce transportation expenses, you can consider using a monthly public transport pass or bicycle usage."
+- For "Shopping": "To control shopping expenses, you can apply the 24-hour rule - don't buy something you like immediately, wait for a day."
 
 RULES:
 - anomaly_percentage: always 999.0 for new categories
 - severity: "mild" (<500 TRY), "moderate" (500-2000 TRY), "severe" (>2000 TRY)
-- alert_message: mention it's a new category in Turkish (10-200 characters)
-- suggested_action: Generate a creative, specific savings tip for this exact category (10-200 characters)
-- Be creative but practical - think like a financial advisor who knows Turkish consumer habits
+- alert_message: mention it's a new category in English (10-200 characters)
+- suggested_action: Generate a creative, specific savings tip for this exact category in English (10-200 characters)
+- Be creative but practical - think like a financial advisor
 - Respond ONLY with JSON"""
         else:
             # Existing category with percentage calculation
             anomaly_percentage = ((current_spending - average_spending) / average_spending) * 100
             
-            prompt = f"""You are an expert financial coach specializing in Turkish consumer habits. Analyze this spending anomaly for a user.
+            prompt = f"""You are an expert financial coach. Analyze this spending anomaly for a user.
 
 SPENDING DATA:
 - Category: {category}
@@ -389,21 +388,21 @@ REQUIRED JSON FORMAT:
 {{
     "anomaly_percentage": {anomaly_percentage:.1f},
     "severity": "moderate",
-    "alert_message": "{category} harcamalarınız bu ay %{anomaly_percentage:.0f} artarak {current_spending:.0f} TRY'ye ulaştı.",
+    "alert_message": "Your spending in {category} increased by {anomaly_percentage:.0f}% this month, reaching {current_spending:.0f} TRY.",
     "suggested_action": "[Generate a creative, specific tip for {category} category]"
 }}
 
 EXAMPLES OF GOOD CATEGORY-SPECIFIC TIPS:
-- For "Restaurants": "Dışarıda yeme masraflarını dengelemek için öğle menülerini tercih edin veya haftada bir gün 'evde yemek' günü belirleyin."
-- For "Entertainment": "Eğlence harcamalarını optimize etmek için ücretsiz etkinlikleri araştırın veya grup indirimlerinden yararlanın."
-- For "Personal Care": "Kişisel bakım masraflarında tasarruf için toplu alım fırsatlarını değerlendirin veya ev yapımı alternatifler deneyin."
+- For "Restaurants": "To balance restaurant expenses, choose lunch menus or designate one day a week as 'dinner at home'."
+- For "Entertainment": "To optimize entertainment expenses, research free events or take advantage of group discounts."
+- For "Personal Care": "To save on personal care expenses, consider bulk purchases or try homemade alternatives."
 
 RULES:
 - anomaly_percentage: exact percentage as calculated
 - severity: "mild" (50-100% increase), "moderate" (100-200% increase), "severe" (>200% increase)
-- alert_message: clear explanation of the anomaly in Turkish (10-200 characters)
-- suggested_action: Generate a creative, specific savings tip for this exact category (10-200 characters)
-- Be creative but practical - think like a financial advisor who knows Turkish consumer habits
+- alert_message: clear explanation of the anomaly in English (10-200 characters)
+- suggested_action: Generate a creative, specific savings tip for this exact category in English (10-200 characters)
+- Be creative but practical - think like a financial advisor
 - Do NOT use generic advice like "review your budget" - be category-specific
 - Respond ONLY with JSON"""
 

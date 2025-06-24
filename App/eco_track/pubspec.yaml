@@ -43,6 +43,9 @@ dependencies:
   # JSON model sınıflarını otomatik oluşturmak için temel annotasyonlar.
   json_annotation: ^4.8.1
   
+  # Immutable model sınıfları oluşturmak için modern ve güçlü bir çözüm.
+  freezed_annotation: ^2.4.1
+  
   # Nesnelerin değer bazlı karşılaştırılmasını basitleştirir (state management için kritik).
   equatable: ^2.0.5
 
@@ -95,6 +98,9 @@ dev_dependencies:
   
   # Modelleri JSON'dan/JSON'a dönüştüren kodu otomatik yazar.
   json_serializable: ^6.7.1
+  
+  # Freezed modelleri için kod üretimi.
+  freezed: ^2.4.6
   
   # GetIt için Dependency Injection kodunu otomatik yazar.
   injectable_generator: ^2.4.1
