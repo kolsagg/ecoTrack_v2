@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.auth import auth_router
 from app.api.v1 import receipts, expenses, categories, merchants, webhooks, loyalty, reviews, devices, admin
 from app.api import reporting, budget
+from app.api import recommendation_router
 
 api_router = APIRouter()
 
@@ -33,4 +34,7 @@ api_router.include_router(budget.router, prefix="/budget", tags=["Budget Managem
 api_router.include_router(loyalty.router, prefix="/loyalty", tags=["Loyalty Program"])
 
 # Include device management router
-api_router.include_router(devices.router, prefix="/devices", tags=["Device Management"]) 
+api_router.include_router(devices.router, prefix="/devices", tags=["Device Management"])
+
+# Include AI recommendation router
+api_router.include_router(recommendation_router.router) 

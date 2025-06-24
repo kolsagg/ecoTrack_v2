@@ -465,7 +465,7 @@ async def apply_budget_allocation(
         
         # Optimal budget allocation percentages based on financial research
         optimal_allocations = {
-            "Food & Dining": 0.12, "Transportation": 0.12, "Shopping": 0.10, "Entertainment": 0.08,
+            "Groceries": 0.06, "Dining Out": 0.06, "Transportation": 0.12, "Shopping": 0.10, "Entertainment": 0.08,
             "Healthcare": 0.08, "Education": 0.06, "Utilities": 0.08, "Travel": 0.05,
             "Personal Care": 0.06, "Other": 0.25
         }

@@ -165,6 +165,9 @@ class WebhookProcessingResult(BaseModel):
     is_public_receipt: bool = Field(default=False, description="True if receipt was created as public (no user matched)")
     qr_code: Optional[str] = Field(None, description="Base64 encoded QR code for the receipt")
     public_url: Optional[str] = Field(None, description="Public URL for viewing the receipt (for public receipts)")
+    # Loyalty information
+    loyalty_points_awarded: Optional[int] = Field(None, description="Loyalty points awarded for this transaction")
+    loyalty_transaction_id: Optional[UUID] = Field(None, description="ID of the loyalty transaction record")
 
 
 class CustomerMatchResult(BaseModel):

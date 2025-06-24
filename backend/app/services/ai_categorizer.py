@@ -27,10 +27,15 @@ class AICategorizer:
         
         # Predefined categories with Turkish and English keywords
         self.categories = {
-            'food_dining': {
-                'name': 'Food & Dining',
-                'keywords': ['food', 'restaurant', 'cafe', 'market', 'grocery', 'yemek', 'restoran', 'kafe', 'market', 'gıda'],
-                'merchants': ['migros', 'carrefour', 'bim', 'a101', 'şok', 'mcdonalds', 'burger king', 'starbucks']
+            'groceries': {
+                'name': 'Groceries',
+                'keywords': ['market', 'grocery', 'gıda', 'manav', 'kasap', 'süpermarket'],
+                'merchants': ['migros', 'carrefour', 'bim', 'a101', 'şok', 'istegelsin', 'getir', 'yemeksepeti market']
+            },
+            'dining_out': {
+                'name': 'Dining Out',
+                'keywords': ['restaurant', 'cafe', 'yemek', 'restoran', 'kafe', 'lokanta', 'fast food'],
+                'merchants': ['mcdonalds', 'burger king', 'starbucks', 'yemeksepeti', 'getir yemek', 'nevrest']
             },
             'transportation': {
                 'name': 'Transportation',

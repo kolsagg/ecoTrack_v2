@@ -9,12 +9,16 @@ from app.schemas.merchant import (
     WebhookProcessingResult,
     WebhookLogResponse,
     WebhookLogListResponse,
-    TestTransactionRequest,
     WebhookStatus
 )
 from app.services.merchant_service import MerchantService
 from app.services.webhook_service import WebhookService
 from app.auth.dependencies import require_admin
+
+try:
+    from app.services.cleanup_service import cleanup_service
+except ImportError:
+    cleanup_service = None
 
 router = APIRouter()
 security = HTTPBearer()
@@ -92,34 +96,7 @@ async def receive_merchant_transaction(
         )
 
 
-@router.post("/merchant/{merchant_id}/test-transaction", response_model=WebhookProcessingResult)
-async def test_merchant_transaction(
-    merchant_id: UUID,
-    test_request: TestTransactionRequest,
-    current_user=Depends(require_admin),
-    supabase=Depends(get_supabase_admin_client)
-):
-    """
-    Test endpoint for merchant integration testing (Admin only)
-    
-    Allows testing of the webhook processing flow without requiring
-    a valid merchant API key. Used for integration testing.
-    """
-    try:
-        webhook_service = WebhookService(supabase)
-        result = await webhook_service.process_merchant_transaction(
-            merchant_id, 
-            test_request.transaction_data,
-            test_mode=test_request.test_mode
-        )
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process test transaction: {str(e)}"
-        )
+
 
 
 @router.get("/merchant/{merchant_id}/logs", response_model=WebhookLogListResponse)
@@ -254,6 +231,48 @@ async def get_webhook_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch webhook statistics: {str(e)}"
+        )
+
+
+@router.post("/admin/cleanup/expired-receipts")
+async def trigger_expired_receipts_cleanup(
+    current_user=Depends(require_admin),
+    supabase=Depends(get_supabase_admin_client)
+):
+    """
+    Manually trigger cleanup of expired public receipts (Admin only)
+    
+    This endpoint allows admins to manually trigger the cleanup process
+    that normally runs automatically every 24 hours via scheduler.
+    """
+    try:
+        if not cleanup_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Cleanup service not available"
+            )
+        
+        result = await cleanup_service.cleanup_expired_public_receipts()
+        
+        if result["success"]:
+            return {
+                "message": "Cleanup completed successfully",
+                "receipts_cleaned": result["receipts_cleaned"],
+                "expenses_cleaned": result["expenses_cleaned"],
+                "expense_items_cleaned": result["expense_items_cleaned"]
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Cleanup failed: {result.get('error')}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to run cleanup: {str(e)}"
         )
 
 

@@ -271,4 +271,45 @@ class CategoryCreateRequest(BaseModel):
 
 class CategoryUpdateRequest(BaseModel):
     """Request schema for category update"""
-    name: Optional[str] = Field(None, min_length=1, max_length=50, description="Category name") 
+    name: Optional[str] = Field(None, min_length=1, max_length=50, description="Category name")
+
+# Merchant Schemas
+
+class MerchantReceiptItem(BaseModel):
+    """Schema for merchant receipt item"""
+    description: str = Field(..., min_length=1, max_length=200, description="Item description")
+    quantity: int = Field(1, gt=0, description="Item quantity")
+    unit_price: float = Field(..., gt=0, description="Unit price")
+    amount: float = Field(..., gt=0, description="Total amount for this item")
+    kdv_rate: float = Field(20.0, description="KDV (VAT) rate for this item")
+    
+    @field_validator('kdv_rate')
+    @classmethod
+    def validate_kdv_rate(cls, v):
+        valid_rates = [1.0, 10.0, 20.0]
+        if v not in valid_rates:
+            raise ValueError(f'KDV rate must be one of: {valid_rates}')
+        return v
+
+class MerchantReceiptRequest(BaseModel):
+    """Request schema for merchant receipt creation"""
+    merchant_name: str = Field(..., min_length=1, max_length=100, description="Merchant name")
+    merchant_id: Optional[str] = Field(None, description="Merchant ID")
+    total_amount: float = Field(..., gt=0, description="Total receipt amount")
+    currency: str = Field("TRY", description="Currency code")
+    transaction_date: Optional[datetime] = Field(None, description="Transaction date")
+    tax_number: Optional[str] = Field(None, description="Merchant tax number")
+    items: List[MerchantReceiptItem] = Field(..., min_length=1, description="Receipt items")
+    expires_hours: Optional[int] = Field(48, ge=1, le=168, description="Hours until receipt expires (1-168 hours)")
+
+class MerchantReceiptResponse(BaseModel):
+    """Response schema for merchant receipt creation"""
+    success: bool = Field(..., description="Creation success")
+    message: str = Field(..., description="Response message")
+    receipt_id: str = Field(..., description="Created receipt ID")
+    receipt_url: str = Field(..., description="Public URL for the receipt")
+    qr_data: str = Field(..., description="QR code data (URL)")
+    expires_at: datetime = Field(..., description="Receipt expiration time")
+    merchant_name: str = Field(..., description="Merchant name")
+    total_amount: float = Field(..., description="Total amount")
+    currency: str = Field(..., description="Currency") 

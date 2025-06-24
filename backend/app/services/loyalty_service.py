@@ -41,7 +41,7 @@ class LoyaltyService:
         
         # Category bonus multipliers
         self.category_bonuses = {
-            "food": 1.5,
+            "dining_out": 1.5,
             "grocery": 1.3,
             "fuel": 1.2,
             "restaurant": 1.4

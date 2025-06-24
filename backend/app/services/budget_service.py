@@ -26,7 +26,8 @@ class BudgetService:
         
         # Optimal budget allocation percentages based on research
         self.optimal_allocations = {
-            "Food": 0.15,           # 15% - Gıda
+            "Groceries": 0.08,           # 15% - Gıda
+            "Dining Out": 0.07,           # 15% - Gıda
             "Housing": 0.30,        # 30% - Konut
             "Transportation": 0.15, # 15% - Ulaşım
             "Utilities": 0.08,      # 8% - Faturalar

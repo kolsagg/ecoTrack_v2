@@ -15,7 +15,8 @@ router = APIRouter()
 
 # Predefined system categories
 SYSTEM_CATEGORIES = [
-    {"name": "Food & Dining", "system": True},
+    {"name": "Groceries", "system": True},
+    {"name": "Dining Out", "system": True},
     {"name": "Transportation", "system": True},
     {"name": "Shopping", "system": True},
     {"name": "Health & Medical", "system": True},

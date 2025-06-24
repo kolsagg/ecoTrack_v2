@@ -16,8 +16,8 @@ class QRGenerator:
             box_size=10,
             border=4,
         )
-        # Base URL for receipt viewing from config
-        self.base_url = f"{settings.WEB_BASE_URL}/api/v1/receipts/receipt"
+        # Base URL for receipt viewing from config - updated to use public endpoint
+        self.base_url = f"{settings.WEB_BASE_URL}/api/v1/receipts/public"
     
     def generate_receipt_qr(
         self,
@@ -77,20 +77,32 @@ class QRGenerator:
     def parse_receipt_qr(self, qr_data: str) -> Optional[str]:
         """
         Parse QR data to extract receipt ID
-        Now supports both old format and new URL format
+        Supports multiple URL formats for our receipt system
         Returns receipt_id if found, None otherwise
         """
         try:
-            # Check if it's the new URL format
+            # Check if it's our current API URL format
             if qr_data.startswith(f"{self.base_url}/"):
                 receipt_id = qr_data.replace(f"{self.base_url}/", "")
                 return receipt_id
             
-            # Check for alternative URL formats
-            if "ecotrack.com/receipt/" in qr_data:
-                parts = qr_data.split("/receipt/")
-                if len(parts) > 1:
-                    return parts[1].split("?")[0].split("#")[0]  # Remove query params and fragments
+            # Check for various EcoTrack receipt URL formats
+            ecotrack_patterns = [
+                "/public/",  # New public endpoint
+                "/receipt/",  # Legacy receipt path
+                "ecotrack.com/api/v1/receipts/public/",  # Full production URL
+                "localhost:8000/api/v1/receipts/public/",  # Development
+                "/receipts/receipt/",  # Old API path
+                "localhost:8000/receipt/"  # Legacy development
+            ]
+            
+            for pattern in ecotrack_patterns:
+                if pattern in qr_data:
+                    parts = qr_data.split(pattern)
+                    if len(parts) > 1:
+                        receipt_id = parts[1].split("?")[0].split("#")[0].strip()
+                        if receipt_id:  # Make sure it's not empty
+                            return receipt_id
             
             # Backward compatibility: Check old text format
             lines = qr_data.strip().split('\n')
@@ -98,7 +110,9 @@ class QRGenerator:
             # Look for Receipt ID line in old format
             for line in lines:
                 if line.startswith("Receipt ID:"):
-                    return line.split("Receipt ID:")[1].strip()
+                    receipt_id = line.split("Receipt ID:")[1].strip()
+                    if receipt_id:
+                        return receipt_id
             
             return None
             

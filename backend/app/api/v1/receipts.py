@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 
 from app.core.auth import get_current_user
@@ -14,6 +14,8 @@ from app.schemas.data_processing import (
 )
 from app.services.data_processor import DataProcessor
 from app.services.qr_generator import QRGenerator
+from app.services.ai_categorizer import ai_categorizer
+from app.services.loyalty_service import LoyaltyService
 from app.db.supabase_client import get_authenticated_supabase_client, get_supabase_admin_client
 from app.utils.kdv_calculator import KDVCalculator
 from supabase import Client
@@ -21,115 +23,185 @@ from supabase import Client
 router = APIRouter()
 data_processor = DataProcessor()
 qr_generator = QRGenerator()
+loyalty_service = LoyaltyService()
 
 @router.post("/scan", response_model=QRReceiptResponse)
 async def scan_qr_receipt(
-    request: QRReceiptRequest,
+    scan_request: QRReceiptRequest,
     current_user: dict = Depends(get_current_user),
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    Process QR code data and create receipt with expenses
+    Process EcoTrack QR code data for receipt claiming.
+    Only accepts EcoTrack-generated receipt QR codes.
+    
+    Scenarios:
+    1. User scans their own receipt again -> Show existing receipt details
+    2. User scans unclaimed public receipt -> Claim it for the user (with AI categorization)
+    3. User scans someone else's receipt -> HTTP 403 Forbidden
+    4. User scans non-EcoTrack QR code -> HTTP 400 Invalid QR code
     """
     try:
         # First, check if this QR code contains a receipt ID (our own generated QR)
-        receipt_id = qr_generator.parse_receipt_qr(request.qr_data)
+        receipt_id = qr_generator.parse_receipt_qr(scan_request.qr_data)
         
         if receipt_id:
             # This is our own QR code, check if user has access to this receipt
             receipt_response = supabase.table("receipts").select("*").eq("id", receipt_id).execute()
             
-            if receipt_response.data:
-                receipt = receipt_response.data[0]
+            if not receipt_response.data:
+                raise HTTPException(status_code=404, detail="Receipt from this QR code was not found.")
+
+            receipt = receipt_response.data[0]
+            
+            # Scenario 1: Receipt is already owned by the current user (Requirement 1.b)
+            if receipt["user_id"] == current_user["id"]:
+                expenses_response = supabase.table("expenses").select("id").eq("receipt_id", receipt_id).execute()
+                expenses_count = len(expenses_response.data) if expenses_response.data else 0
                 
-                # Check if this receipt belongs to the current user
-                if receipt["user_id"] == current_user["id"]:
-                    # User owns this receipt, return full details
-                    expenses_response = supabase.table("expenses").select("id").eq("receipt_id", receipt_id).execute()
-                    expenses_count = len(expenses_response.data) if expenses_response.data else 0
+                return QRReceiptResponse(
+                    success=True,
+                    message="Receipt already in your account. Showing details.",
+                    receipt_id=receipt_id,
+                    merchant_name=receipt["merchant_name"],
+                    total_amount=receipt["total_amount"],
+                    currency=receipt["currency"],
+                    expenses_count=expenses_count,
+                    processing_confidence=1.0,
+                    public_url=None
+                )
+            
+            # Scenario 2: Receipt is public and unclaimed (user_id is NULL)
+            elif receipt["user_id"] is None and receipt.get("is_public"):
+                # Check for expiration (Requirement 2.a)
+                if receipt.get("expires_at"):
+                    expires_at_dt = datetime.fromisoformat(receipt["expires_at"].replace('Z', '+00:00'))
+                    current_time = datetime.now(timezone.utc)
+                    if expires_at_dt < current_time:
+                        raise HTTPException(status_code=410, detail="This QR code has expired and can no longer be claimed.")
+                
+                # Claim the receipt for the current user
+                update_response = supabase.table("receipts").update({
+                    "user_id": current_user["id"],
+                    "is_public": False,
+                    "expires_at": None  # Make it permanent
+                }).eq("id", receipt_id).execute()
+                
+                if not update_response.data:
+                    raise HTTPException(status_code=500, detail="Failed to claim the receipt.")
+                
+                # Also update the associated expense and expense_items to belong to the user
+                supabase.table("expenses").update({
+                    "user_id": current_user["id"]
+                }).eq("receipt_id", receipt_id).execute()
+                
+                # Get expense items for AI categorization
+                expenses_response = supabase.table("expenses").select("id").eq("receipt_id", receipt_id).execute()
+                
+                # Update expense_items user_id as well
+                if expenses_response.data:
+                    expense_id = expenses_response.data[0]["id"]
+                    supabase.table("expense_items").update({
+                        "user_id": current_user["id"]
+                    }).eq("expense_id", expense_id).execute()
+                expenses_count = len(expenses_response.data) if expenses_response.data else 0
+                
+                # Apply AI categorization to uncategorized expense items
+                if expenses_response.data:
+                    expense_id = expenses_response.data[0]["id"]
                     
-                    return QRReceiptResponse(
-                        success=True,
-                        message="Your existing receipt found from QR code",
-                        receipt_id=receipt_id,
-                        merchant_name=receipt["merchant_name"],
-                        total_amount=receipt["total_amount"],
-                        currency=receipt["currency"],
-                        expenses_count=expenses_count,
-                        processing_confidence=1.0,  # Perfect match for our own QR
-                        public_url=None  # User owns this receipt, no public URL needed
-                    )
-                else:
-                    # Receipt exists but belongs to someone else
-                    # Return basic info and suggest they can view it publicly
-                    return QRReceiptResponse(
-                        success=True,
-                        message="Receipt found - you can view it at the public URL",
-                        receipt_id=receipt_id,
-                        merchant_name=receipt["merchant_name"],
-                        total_amount=receipt["total_amount"],
-                        currency=receipt["currency"],
-                        expenses_count=0,
-                        processing_confidence=1.0,
-                        public_url=f"https://ecotrack.com/receipt/{receipt_id}"
-                    )
+                    # Get expense items that don't have categories assigned
+                    expense_items_response = supabase.table("expense_items").select("*").eq("expense_id", expense_id).is_("category_id", "null").execute()
+                    
+                    if expense_items_response.data:
+                        for item in expense_items_response.data:
+                            try:
+                                # Use AI categorizer to get category suggestion
+                                categorization_result = await ai_categorizer.categorize_expense(
+                                    description=item.get("description", ""),
+                                    merchant_name=receipt["merchant_name"],
+                                    amount=item.get("amount")
+                                )
+                                
+                                # Only assign category if confidence is above threshold (0.3)
+                                if categorization_result["confidence"] > 0.3:
+                                    # Get category_id from categories table
+                                    category_response = supabase.table("categories").select("id").eq("name", categorization_result["category_name"]).execute()
+                                    
+                                    if category_response.data:
+                                        category_id = category_response.data[0]["id"]
+                                        
+                                        # Update expense item with category
+                                        supabase.table("expense_items").update({
+                                            "category_id": category_id
+                                        }).eq("id", item["id"]).execute()
+                                        
+                            except Exception as e:
+                                # Log error but don't fail the claim process
+                                print(f"AI categorization failed for item {item.get('id')}: {str(e)}")
+                                continue
+
+                # Award loyalty points for the claimed receipt
+                if expenses_response.data:
+                    expense_id = expenses_response.data[0]["id"]
+                    
+                    try:
+                        # Get the primary category from expense items for loyalty calculation
+                        primary_category = None
+                        expense_items_response = supabase.table("expense_items").select("""
+                            *,
+                            categories(name)
+                        """).eq("expense_id", expense_id).execute()
+                        
+                        if expense_items_response.data:
+                            # Find the first item with a category or highest value item
+                            categorized_items = [item for item in expense_items_response.data if item.get("categories")]
+                            if categorized_items:
+                                primary_category = categorized_items[0]["categories"]["name"]
+                        
+                        # Award loyalty points
+                        loyalty_result = await loyalty_service.award_points_for_expense(
+                            user_id=current_user["id"],
+                            expense_id=expense_id,
+                            amount=receipt["total_amount"],
+                            category=primary_category,
+                            merchant_name=receipt["merchant_name"]
+                        )
+                        
+                        if loyalty_result["success"]:
+                            print(f"Loyalty points awarded on receipt claim: {loyalty_result['points_awarded']} points for user {current_user['id']}")
+                        else:
+                            print(f"Failed to award loyalty points for claimed receipt {receipt_id}")
+                            
+                    except Exception as loyalty_error:
+                        # Don't fail the claim process if loyalty points fail
+                        print(f"Loyalty points error during receipt claim: {str(loyalty_error)}")
+
+                return QRReceiptResponse(
+                    success=True,
+                    message="Receipt successfully claimed and added to your account.",
+                    receipt_id=receipt_id,
+                    merchant_name=receipt["merchant_name"],
+                    total_amount=receipt["total_amount"],
+                    currency=receipt["currency"],
+                    expenses_count=expenses_count,
+                    processing_confidence=1.0,
+                    public_url=None
+                )
+
+            # Scenario 3: Receipt is owned by someone else (already claimed)
             else:
-                raise HTTPException(status_code=404, detail="Receipt not found for this QR code")
+                raise HTTPException(
+                    status_code=403, 
+                    detail="This receipt has already been claimed by another user and is no longer available."
+                )
         
-        # If not our QR code, process as new receipt
-        result = await data_processor.process_qr_receipt(
-            qr_data=request.qr_data,
-            user_id=current_user["id"]
-        )
-        
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=f"QR processing failed: {', '.join(result['errors'])}")
-        
-        # Create receipt in database
-        receipt_data = result["receipt_data"]
-        receipt_response = supabase.table("receipts").insert(receipt_data).execute()
-        
-        if not receipt_response.data:
-            raise HTTPException(status_code=500, detail="Failed to create receipt")
-        
-        receipt_id = receipt_response.data[0]["id"]
-        
-        # Create expense summary
-        expense_data = result["expense_data"]
-        expense_data["receipt_id"] = receipt_id
-        
-        expense_response = supabase.table("expenses").insert(expense_data).execute()
-        
-        if not expense_response.data:
-            raise HTTPException(status_code=500, detail="Failed to create expense")
-        
-        expense_id = expense_response.data[0]["id"]
-        
-        # Create expense items
-        items_created = 0
-        for item in result["expense_items"]:
-            item["expense_id"] = expense_id
-            
-            # Use suggested category if available
-            if item.get("suggested_category_id"):
-                item["category_id"] = item["suggested_category_id"]
-            
-            item_response = supabase.table("expense_items").insert(item).execute()
-            
-            if item_response.data:
-                items_created += 1
-        
-        return QRReceiptResponse(
-            success=True,
-            message=f"Receipt processed successfully with {items_created} items",
-            receipt_id=receipt_id,
-            merchant_name=receipt_data.get("merchant_name"),
-            total_amount=receipt_data.get("total_amount"),
-            currency=receipt_data.get("currency", "TRY"),
-            expenses_count=items_created,
-            processing_confidence=0.8,  # Default confidence for QR processing
-            public_url=None  # New receipt, no public URL yet
-        )
+        # If not our QR code, reject it
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid QR code. Only EcoTrack receipt QR codes can be scanned."
+            )
         
     except HTTPException:
         raise
@@ -274,87 +346,22 @@ async def get_receipt_detail(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch receipt: {str(e)}")
 
-@router.get("/public/{receipt_id}")
+@router.get("/public/{receipt_id}", response_class=HTMLResponse)
 async def get_public_receipt(
     receipt_id: UUID,
     supabase: Client = Depends(get_supabase_admin_client)
 ):
     """
-    Get public receipt information without authentication
-    This endpoint is used when someone scans a QR code but is not logged in
-    Returns basic receipt information for public viewing
-    """
-    try:
-        # Get receipt using admin client but only if it's public
-        receipt_response = supabase.table("receipts").select("*").eq("id", str(receipt_id)).eq("is_public", True).execute()
-        
-        if not receipt_response.data:
-            raise HTTPException(status_code=404, detail="Public receipt not found")
-        
-        receipt = receipt_response.data[0]
-        
-        # Get expense items for this receipt (for display purposes)
-        expense_response = supabase.table("expenses").select("*").eq("receipt_id", str(receipt_id)).execute()
-        
-        items = []
-        if expense_response.data:
-            expense = expense_response.data[0]
-            
-            # Get expense items
-            items_response = supabase.table("expense_items").select("""
-                description,
-                amount,
-                quantity,
-                unit_price,
-                kdv_rate
-            """).eq("expense_id", expense["id"]).execute()
-            
-            items = items_response.data if items_response.data else []
-        
-        # Generate QR code for this receipt
-        qr_code = qr_generator.generate_receipt_qr(
-            receipt_id=str(receipt_id),
-            merchant_name=receipt["merchant_name"],
-            total_amount=receipt["total_amount"],
-            currency=receipt["currency"],
-            transaction_date=datetime.fromisoformat(receipt["transaction_date"].replace('Z', '+00:00'))
-        )
-        
-        # Return public receipt data (no sensitive user information)
-        return {
-            "id": receipt["id"],
-            "merchant_id": receipt["merchant_id"],
-            "merchant_name": receipt["merchant_name"],
-            "transaction_date": receipt["transaction_date"],
-            "total_amount": receipt["total_amount"],
-            "currency": receipt["currency"],
-            "items": items,
-            "qr_code": qr_code,
-            "created_at": receipt["created_at"],
-            "is_public_view": True,
-            "app_download_message": "Download the EcoTrack app to view this receipt in your app and track your expenses!"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch public receipt: {str(e)}")
-
-@router.get("/receipt/{receipt_id}", response_class=HTMLResponse)
-async def get_receipt_web_view(
-    receipt_id: UUID,
-    supabase: Client = Depends(get_supabase_admin_client)
-):
-    """
-    Web view for receipt - serves HTML page for public receipt viewing
+    Public web view for receipt - serves HTML page for public receipt viewing
     This endpoint is accessed when someone visits the URL from QR code
+    Includes expiration checking (Requirement 2.a)
     """
     try:
         # Get receipt using admin client but only if it's public
         receipt_response = supabase.table("receipts").select("*").eq("id", str(receipt_id)).eq("is_public", True).execute()
         
         if not receipt_response.data:
-            # Return 404 HTML page
+            # Return 404 HTML page if not found or already claimed
             return HTMLResponse(
                 content="""
                 <!DOCTYPE html>
@@ -370,7 +377,7 @@ async def get_receipt_web_view(
                 </head>
                 <body>
                     <h1 class="error">Receipt Not Found</h1>
-                    <p>The receipt you are looking for was not found or is no longer available.</p>
+                    <p>The receipt you are looking for was not found, may have been claimed by a user, or is no longer available.</p>
                     <a href="/">Back to Home</a>
                 </body>
                 </html>
@@ -379,6 +386,38 @@ async def get_receipt_web_view(
             )
         
         receipt = receipt_response.data[0]
+
+        # Requirement 2.a: Check for expiration
+        if receipt.get("expires_at"):
+            expires_at_dt = datetime.fromisoformat(receipt["expires_at"].replace('Z', '+00:00'))
+            current_time = datetime.now(timezone.utc)
+            if expires_at_dt < current_time:
+                return HTMLResponse(
+                    content="""
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>QR Code Expired - EcoTrack</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                            .error { color: #f39c12; }
+                            .container { max-width: 500px; margin: 0 auto; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h1 class="error">QR Code Expired</h1>
+                            <p>The QR code you scanned has expired and is no longer valid.</p>
+                            <p>Public receipts expire after 48 hours if not claimed by a user.</p>
+                            <a href="/">Back to Home</a>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    status_code=410
+                )
         
         # Get expense items for this receipt
         expense_response = supabase.table("expenses").select("*").eq("receipt_id", str(receipt_id)).execute()
@@ -674,3 +713,5 @@ async def get_receipt_web_view(
             """,
             status_code=500
         )
+
+# Merchant endpoints are now handled by the webhook service at /api/v1/webhooks/merchant/{merchant_id}/transaction

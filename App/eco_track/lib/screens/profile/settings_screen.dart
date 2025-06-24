@@ -258,16 +258,16 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Icon(Icons.warning, color: Colors.red[700]),
             const SizedBox(width: 8),
-            const Text('Hesabı Sil'),
+            const Text('Delete Account'),
           ],
         ),
         content: const Text(
-          'Bu işlem geri alınamaz! Hesabınız ve tüm verileriniz kalıcı olarak silinecektir.\n\nDevam etmek istediğinizden emin misiniz?',
+          'This action cannot be undone! Your account and all data will be permanently deleted.\n\nAre you sure you want to proceed?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
@@ -275,7 +275,7 @@ class SettingsScreen extends ConsumerWidget {
               _confirmDeleteAccount(context, ref);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red[700]),
-            child: const Text('Sil'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -286,12 +286,12 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Son Onay'),
-        content: const Text('Hesabınızı silmek için "SİL" yazın:'),
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to delete your account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
@@ -299,13 +299,13 @@ class SettingsScreen extends ConsumerWidget {
               // TODO: Implement account deletion
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Hesap silme işlemi yakında geliyor!'),
+                  content: Text('Account deletion is coming soon!'),
                   backgroundColor: Colors.red,
                 ),
               );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red[700]),
-            child: const Text('Hesabı Sil'),
+            child: const Text('Delete Account'),
           ),
         ],
       ),
