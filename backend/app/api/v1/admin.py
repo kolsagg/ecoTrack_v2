@@ -1,8 +1,23 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from typing import Dict, Any
 from app.auth.dependencies import require_admin
+from app.services.global_inflation_service import GlobalInflationService
 
 router = APIRouter()
+
+@router.post("/trigger-monthly-inflation-calculation", status_code=202)
+async def trigger_monthly_inflation_calculation(
+    background_tasks: BackgroundTasks,
+    current_user: Dict[str, Any] = Depends(require_admin)
+):
+    """
+    Triggers a background task to calculate and store monthly product inflation data.
+    This calculates month-over-month price changes for all products.
+    This is a non-blocking operation and only accessible by admins.
+    """
+    service = GlobalInflationService()
+    background_tasks.add_task(service.calculate_and_store_monthly_inflation)
+    return {"message": "Monthly inflation calculation has been started in the background."}
 
 @router.get("/check-permissions")
 async def check_admin_permissions(

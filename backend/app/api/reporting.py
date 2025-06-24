@@ -14,15 +14,15 @@ from app.schemas.reporting import (
     ChartType, PeriodType
 )
 from app.services.reporting_service import ReportingService
-from app.db.supabase_client import get_authenticated_supabase_client
+from app.db.supabase_client import get_authenticated_supabase_client, get_supabase_client
 from supabase import Client
 
 router = APIRouter()
 
 # Initialize reporting service to get constants
 _reporting_service = ReportingService()
-MONTH_NAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-               'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+               'July', 'August', 'September', 'October', 'November', 'December']
 CHART_COLORS = _reporting_service.category_colors
 
 
@@ -67,17 +67,17 @@ async def get_category_distribution(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    **A. Pasta/Donut Grafik Yanıtı**
+    **A. Pie/Donut Chart Response**
     
     Returns monthly category distribution in the exact format specified:
     ```json
     {
-      "reportTitle": "Ocak 2024 Kategori Dağılımı",
+      "reportTitle": "January 2025 Category Distribution",
       "totalAmount": 2450.75,
       "chartType": "pie",
       "data": [
-        { "label": "Gıda", "value": 1250.75, "percentage": 51.0, "color": "#FF5722" },
-        { "label": "Ulaşım", "value": 890.50, "percentage": 36.3, "color": "#2196F3" }
+        { "label": "Food", "value": 1250.75, "percentage": 51.0, "color": "#FF5722" },
+        { "label": "Transportation", "value": 890.50, "percentage": 36.3, "color": "#2196F3" }
       ]
     }
     ```
@@ -101,7 +101,7 @@ async def get_category_distribution(
         
         if not result.data:
             return {
-                "reportTitle": f"{MONTH_NAMES[month]} {year} Kategori Dağılımı",
+                "reportTitle": f"{MONTH_NAMES[month]} {year} Category Distribution",
                 "totalAmount": 0.0,
                 "chartType": chart_type.value,
                 "data": []
@@ -114,9 +114,9 @@ async def get_category_distribution(
         for expense in result.data:
             expense_items = expense.get("expense_items", [])
             for item in expense_items:
-                category_name = "Diğer"
+                category_name = "Other"
                 if item.get("categories"):
-                    category_name = item["categories"].get("name", "Diğer")
+                    category_name = item["categories"].get("name", "Other")
                 
                 amount = float(item.get("amount", 0))
                 category_totals[category_name] += amount
@@ -134,7 +134,7 @@ async def get_category_distribution(
             })
         
         return {
-            "reportTitle": f"{MONTH_NAMES[month]} {year} Kategori Dağılımı",
+            "reportTitle": f"{MONTH_NAMES[month]} {year} Category Distribution",
             "totalAmount": round(total_amount, 2),
             "chartType": chart_type.value,
             "data": chart_data
@@ -152,17 +152,17 @@ async def get_budget_vs_actual(
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):
     """
-    **B. Çubuk Grafik Yanıtı**
+    **B. Bar Chart Response**
     
     Returns budget vs actual spending comparison in the exact format specified:
     ```json
     {
-      "reportTitle": "Ocak 2024 Bütçe vs. Harcama",
+      "reportTitle": "January 2025 Budget vs. Actual",
       "chartType": "bar",
-      "labels": ["Gıda", "Ulaşım", "Fatura"],
+      "labels": ["Food", "Transportation", "Bills"],
       "datasets": [
-        { "label": "Bütçe", "color": "#4CAF50", "data": [1000, 400, 600] },
-        { "label": "Gerçekleşen", "color": "#F44336", "data": [1250, 350, 580] }
+        { "label": "Budget", "color": "#4CAF50", "data": [1000, 400, 600] },
+        { "label": "Actual", "color": "#F44336", "data": [1250, 350, 580] }
       ]
     }
     ```
@@ -246,9 +246,75 @@ async def get_budget_vs_actual(
         raise HTTPException(status_code=500, detail=f"Failed to generate budget comparison: {str(e)}")
 
 
+@router.get(
+    "/monthly-inflation",
+    response_model=List[Dict[str, Any]],
+    summary="Get Monthly Product Inflation Data",
+    description="Retrieves pre-calculated monthly inflation data for products across the entire platform. Shows month-over-month price changes. Requires authentication.",
+    tags=["Financial Reporting"]
+)
+async def get_monthly_inflation_report(
+    year: Optional[int] = Query(None, description="Filter by specific year"),
+    month: Optional[int] = Query(None, ge=1, le=12, description="Filter by specific month (1-12)"),
+    product_name: Optional[str] = Query(None, description="Filter by product name (partial match)"),
+    sort_by: Optional[str] = Query("inflation_percentage", description="Field to sort by (inflation_percentage, year, month, product_name, average_price)"),
+    order: Optional[str] = Query("desc", description="Sort order ('asc' or 'desc')"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    current_user: dict = Depends(get_current_user),
+    supabase: Client = Depends(get_authenticated_supabase_client)
+):
+    """
+    Fetches the monthly product inflation report from pre-calculated data.
+    This endpoint reads from a data store that is updated periodically by a background job.
+    Shows month-over-month price changes for products across the platform.
+    Requires user authentication.
+    
+    **Response Format:**
+    ```json
+    [
+      {
+        "id": "uuid",
+        "product_name": "Süt",
+        "year": 2025,
+        "month": 1,
+        "average_price": 12.50,
+        "purchase_count": 45,
+        "previous_month_price": 11.80,
+        "inflation_percentage": 5.93,
+        "last_updated_at": "2025-01-15T10:30:00Z"
+      }
+    ]
+    ```
+    """
+    try:
+        # Build query with filters
+        query = supabase.table("global_product_inflation").select("*")
+        
+        # Apply filters
+        if year is not None:
+            query = query.eq("year", year)
+        if month is not None:
+            query = query.eq("month", month)
+        if product_name is not None:
+            query = query.ilike("product_name", f"%{product_name}%")
+        
+        # Handle sorting
+        sort_column = sort_by or "inflation_percentage"
+        order_desc = (order == "desc") if order else True
+        
+        # Apply sorting and limit
+        query = query.order(sort_column, desc=order_desc).limit(limit)
+        
+        response = query.execute()
+        
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve monthly inflation data: {str(e)}")
+
+
 @router.get("/spending-trends", summary="Spending Trends Over Time (Line Chart)")
 async def get_spending_trends(
-    period: PeriodType = Query(..., description="Time period (this_month, 3_months, 6_months, 1_year)"),
+    period: PeriodType = Query(PeriodType.SIX_MONTHS, description="Time period for grouping (monthly/yearly)"),
     current_user: dict = Depends(get_current_user),
     supabase: Client = Depends(get_authenticated_supabase_client)
 ):

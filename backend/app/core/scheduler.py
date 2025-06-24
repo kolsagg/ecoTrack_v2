@@ -13,6 +13,11 @@ try:
 except ImportError:
     cleanup_service = None
 
+try:
+    from app.services.global_inflation_service import GlobalInflationService
+except ImportError:
+    GlobalInflationService = None
+
 logger = logging.getLogger(__name__)
 
 class TaskScheduler:
@@ -23,6 +28,7 @@ class TaskScheduler:
         self.tasks: Dict[str, Dict] = {}
         self.running = False
         self.loyalty_service = LoyaltyService() if LoyaltyService else None
+        self.inflation_service = GlobalInflationService() if GlobalInflationService else None
     
     def add_task(self, name: str, func: Callable, interval_minutes: int, run_immediately: bool = False):
         """
@@ -112,6 +118,14 @@ class TaskScheduler:
             self._system_health_check,
             interval_minutes=60  # 1 saat
         )
+        
+        # Aylık enflasyon hesaplama (haftalık - Pazar gecesi 3:00)
+        self.add_task(
+            "calculate_monthly_inflation",
+            self._calculate_monthly_inflation,
+            interval_minutes=7 * 24 * 60,  # 7 gün
+            run_immediately=False
+        )
     
     async def _update_loyalty_levels(self):
         """
@@ -187,6 +201,22 @@ class TaskScheduler:
             logger.info("System health check completed successfully")
         except Exception as e:
             logger.error(f"System health check failed: {e}")
+
+    async def _calculate_monthly_inflation(self):
+        """
+        Aylık ürün enflasyonunu hesapla ve veritabanına kaydet (aydan aya değişim)
+        """
+        try:
+            logger.info("Monthly inflation calculation task started")
+            
+            if self.inflation_service:
+                await self.inflation_service.calculate_and_store_monthly_inflation()
+                logger.info("Monthly inflation calculation completed successfully")
+            else:
+                logger.warning("GlobalInflationService not available, skipping monthly inflation calculation")
+                
+        except Exception as e:
+            logger.error(f"Error calculating monthly inflation: {e}")
 
 # Global scheduler instance
 scheduler = TaskScheduler() 
